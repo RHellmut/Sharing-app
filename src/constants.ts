@@ -23,8 +23,8 @@ export const CATEGORIES: CategoryDef[] = [
 export const USER_CATEGORIES = CATEGORIES.filter(c => c.id !== 'ausgleich');
 
 export const DEFAULT_SETTINGS: Settings = {
-  person1Name: 'Du',
-  person2Name: 'Freundin',
+  person1Name: 'René',
+  person2Name: 'Lisa',
 };
 
 export const STORAGE_KEY = 'kostenteilung_v1';
