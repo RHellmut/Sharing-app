@@ -28,3 +28,8 @@ export interface Settings {
   person1Name: string;
   person2Name: string;
 }
+
+export interface Kassensturz {
+  id: string;
+  createdAt: string; // ISO datetime
+}

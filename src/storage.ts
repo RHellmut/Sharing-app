@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Expense, Settings } from './types';
+import { useState, useEffect, useMemo } from 'react';
+import { Expense, Settings, Kassensturz } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 import { supabase } from './supabaseClient';
 
-// DB-Zeile → TypeScript-Typ
 function dbToExpense(row: Record<string, unknown>): Expense {
   return {
     id:           row.id as string,
@@ -19,21 +18,47 @@ function dbToExpense(row: Record<string, unknown>): Expense {
   };
 }
 
+function dbToKassensturz(row: Record<string, unknown>): Kassensturz {
+  return {
+    id:        row.id as string,
+    createdAt: row.created_at as string,
+  };
+}
+
 export interface StoreResult {
-  expenses:       Expense[];
-  settings:       Settings;
-  loading:        boolean;
-  error:          string | null;
-  addExpense:     (e: Expense) => void;
-  deleteExpense:  (id: string) => void;
-  updateSettings: (s: Settings) => void;
+  expenses:           Expense[];
+  activeExpenses:     Expense[];
+  archivedExpenses:   Expense[];
+  kassensturzList:    Kassensturz[];
+  settings:           Settings;
+  loading:            boolean;
+  error:              string | null;
+  addExpense:         (e: Expense) => void;
+  deleteExpense:      (id: string) => void;
+  updateSettings:     (s: Settings) => void;
+  performKassensturz: () => Promise<void>;
 }
 
 export function useStore(): StoreResult {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [kassensturzList, setKassensturzList] = useState<Kassensturz[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Aktive Einträge = nach dem letzten Kassensturz (oder alle, wenn noch keiner)
+  const activeExpenses = useMemo(() => {
+    const last = kassensturzList[0]; // absteigend sortiert → [0] ist der neueste
+    if (!last) return expenses;
+    return expenses.filter(e => e.createdAt > last.createdAt);
+  }, [expenses, kassensturzList]);
+
+  // Archivierte Einträge = vor dem letzten Kassensturz
+  const archivedExpenses = useMemo(() => {
+    const last = kassensturzList[0];
+    if (!last) return [];
+    return expenses.filter(e => e.createdAt <= last.createdAt);
+  }, [expenses, kassensturzList]);
 
   useEffect(() => {
     let mounted = true;
@@ -55,35 +80,63 @@ export function useStore(): StoreResult {
         .eq('id', 1)
         .single();
       if (!mounted || !data) return;
-      setSettings({ person1Name: data.person1_name, person2Name: data.person2_name });
+      const names = { person1Name: data.person1_name, person2Name: data.person2_name };
+      // Alte Standard-Namen automatisch auf René/Lisa migrieren
+      if (names.person1Name === 'Du' && names.person2Name === 'Freundin') {
+        setSettings(DEFAULT_SETTINGS);
+        void supabase.from('settings')
+          .update({ person1_name: DEFAULT_SETTINGS.person1Name, person2_name: DEFAULT_SETTINGS.person2Name })
+          .eq('id', 1);
+      } else {
+        setSettings(names);
+      }
+    };
+
+    const fetchKassensturz = async () => {
+      const { data } = await supabase
+        .from('kassensturz')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!mounted) return;
+      setKassensturzList((data ?? []).map(dbToKassensturz));
     };
 
     // Erstes Laden
-    void Promise.all([fetchExpenses(), fetchSettings()]).finally(() => {
+    void Promise.all([fetchExpenses(), fetchSettings(), fetchKassensturz()]).finally(() => {
       if (mounted) setLoading(false);
     });
 
-    // Echtzeit-Subscription → beide Handys synken automatisch
+    // Echtzeit-Subscriptions → beide Handys synken automatisch
     const channel = supabase
       .channel('db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, fetchExpenses)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kassensturz' }, fetchKassensturz)
       .subscribe();
+
+    // Polling-Fallback alle 30 Sekunden (falls Realtime nicht konfiguriert ist)
+    const poll = setInterval(() => {
+      void fetchExpenses();
+      void fetchKassensturz();
+    }, 30_000);
 
     return () => {
       mounted = false;
+      clearInterval(poll);
       void supabase.removeChannel(channel);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     expenses,
+    activeExpenses,
+    archivedExpenses,
+    kassensturzList,
     settings,
     loading,
     error,
 
     addExpense(expense: Expense) {
-      // Sofort lokal anzeigen (optimistisch), Supabase synct im Hintergrund
       setExpenses(prev => [expense, ...prev]);
       void supabase.from('expenses').insert({
         id:            expense.id,
@@ -100,17 +153,33 @@ export function useStore(): StoreResult {
     },
 
     deleteExpense(id: string) {
-      // Sofort lokal entfernen, Supabase synct im Hintergrund
       setExpenses(prev => prev.filter(e => e.id !== id));
       void supabase.from('expenses').delete().eq('id', id);
     },
 
     updateSettings(s: Settings) {
-      // Sofort lokal aktualisieren, Supabase synct im Hintergrund
       setSettings(s);
       void supabase.from('settings')
         .update({ person1_name: s.person1Name, person2_name: s.person2Name })
         .eq('id', 1);
+    },
+
+    async performKassensturz() {
+      const newKs: Kassensturz = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+      };
+      // Optimistisch lokal setzen
+      setKassensturzList(prev => [newKs, ...prev]);
+      const { error: err } = await supabase.from('kassensturz').insert({
+        id:         newKs.id,
+        created_at: newKs.createdAt,
+      });
+      if (err) {
+        // Bei Fehler rückgängig machen
+        setKassensturzList(prev => prev.filter(k => k.id !== newKs.id));
+        throw err;
+      }
     },
   };
 }

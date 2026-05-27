@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Plus, List, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive } from 'lucide-react';
 import { useStore } from './storage';
 import { BalanceCard } from './components/BalanceCard';
 import { AddExpenseForm } from './components/AddExpenseForm';
@@ -14,13 +14,27 @@ type Tab = 'overview' | 'add' | 'history';
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
   const [showSettings, setShowSettings] = useState(false);
-  const { expenses, settings, loading, error, addExpense, deleteExpense, updateSettings } = useStore();
+  const [confirmingKassensturz, setConfirmingKassensturz] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
 
-  const thisMonth = expensesThisMonth(expenses);
-  const recent = expenses.filter(e => e.categoryId !== 'ausgleich').slice(0, 4);
+  const {
+    activeExpenses,
+    archivedExpenses,
+    kassensturzList,
+    settings,
+    loading,
+    error,
+    addExpense,
+    deleteExpense,
+    updateSettings,
+    performKassensturz,
+  } = useStore();
+
+  const thisMonth = expensesThisMonth(activeExpenses);
+  const recent = activeExpenses.filter(e => e.categoryId !== 'ausgleich').slice(0, 4);
 
   const handleSettle = () => {
-    const bal = calculateBalance(expenses);
+    const bal = calculateBalance(activeExpenses);
     if (bal.amount < 0.005) return;
     const debtor: PersonId = bal.debtorIsP1 ? 'person1' : 'person2';
     addExpense({
@@ -33,6 +47,12 @@ export default function App() {
       date: new Date().toISOString().split('T')[0],
       createdAt: new Date().toISOString(),
     });
+  };
+
+  const handleKassensturz = async () => {
+    await performKassensturz();
+    setConfirmingKassensturz(false);
+    setShowArchive(false);
   };
 
   if (loading) {
@@ -82,7 +102,7 @@ export default function App() {
         {/* ── Overview ── */}
         {tab === 'overview' && (
           <div className="space-y-5">
-            <BalanceCard expenses={expenses} settings={settings} onSettle={handleSettle} />
+            <BalanceCard expenses={activeExpenses} settings={settings} onSettle={handleSettle} />
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3">
@@ -92,10 +112,58 @@ export default function App() {
                 <p className="text-xs text-gray-400 mt-1">{thisMonth.length} Ausgaben</p>
               </div>
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p className="text-xs text-gray-400 mb-1">Gesamt</p>
-                <p className="text-xl font-bold text-gray-800">{formatCurrency(totalExpenses(expenses))}</p>
-                <p className="text-xs text-gray-400 mt-1">{expenses.length} Ausgaben</p>
+                <p className="text-xs text-gray-400 mb-1">
+                  {kassensturzList.length > 0 ? 'Seit Kassensturz' : 'Gesamt'}
+                </p>
+                <p className="text-xl font-bold text-gray-800">{formatCurrency(totalExpenses(activeExpenses))}</p>
+                <p className="text-xs text-gray-400 mt-1">{activeExpenses.length} Ausgaben</p>
               </div>
+            </div>
+
+            {/* Kassensturz */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                    <Archive size={15} className="text-amber-500" />
+                    Kassensturz
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {kassensturzList.length > 0
+                      ? `Letzter: ${new Date(kassensturzList[0].createdAt).toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      : 'Noch kein Kassensturz'}
+                  </p>
+                </div>
+                {!confirmingKassensturz ? (
+                  <button
+                    onClick={() => setConfirmingKassensturz(true)}
+                    disabled={activeExpenses.length === 0}
+                    className="flex-shrink-0 px-3 py-2 bg-amber-500 text-white text-xs font-semibold rounded-lg hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Kassensturz machen
+                  </button>
+                ) : (
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => setConfirmingKassensturz(false)}
+                      className="px-3 py-2 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Nein
+                    </button>
+                    <button
+                      onClick={handleKassensturz}
+                      className="px-3 py-2 bg-amber-500 text-white text-xs font-semibold rounded-lg hover:bg-amber-600 transition-colors"
+                    >
+                      Ja, jetzt
+                    </button>
+                  </div>
+                )}
+              </div>
+              {confirmingKassensturz && (
+                <p className="text-xs text-gray-500 mt-3 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                  {activeExpenses.length} {activeExpenses.length === 1 ? 'Eintrag wird' : 'Einträge werden'} archiviert und der Saldo auf 0 zurückgesetzt.
+                </p>
+              )}
             </div>
 
             {/* Category breakdown */}
@@ -159,7 +227,7 @@ export default function App() {
               </div>
             )}
 
-            {expenses.length === 0 && (
+            {activeExpenses.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 <span className="text-5xl mb-3">🛒</span>
                 <p className="font-medium text-gray-500">Noch keine Ausgaben</p>
@@ -180,11 +248,59 @@ export default function App() {
 
         {/* ── History ── */}
         {tab === 'history' && (
-          <ExpenseList
-            expenses={expenses}
-            settings={settings}
-            onDelete={deleteExpense}
-          />
+          <div className="space-y-4">
+            {/* Archiv-Toggle */}
+            {archivedExpenses.length > 0 && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowArchive(false)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+                    !showArchive ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  Aktuell ({activeExpenses.length})
+                </button>
+                <button
+                  onClick={() => setShowArchive(true)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                    showArchive ? 'bg-amber-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <Archive size={14} />
+                  Archiv ({archivedExpenses.length})
+                </button>
+              </div>
+            )}
+
+            {showArchive ? (
+              <>
+                {kassensturzList.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-2.5 flex items-center gap-2">
+                    <Archive size={14} className="text-amber-500 flex-shrink-0" />
+                    <p className="text-xs text-amber-700">
+                      Kassensturz vom{' '}
+                      <strong>
+                        {new Date(kassensturzList[0].createdAt).toLocaleDateString('de-DE', {
+                          day: 'numeric', month: 'long', year: 'numeric',
+                        })}
+                      </strong>
+                    </p>
+                  </div>
+                )}
+                <ExpenseList
+                  expenses={archivedExpenses}
+                  settings={settings}
+                  onDelete={deleteExpense}
+                />
+              </>
+            ) : (
+              <ExpenseList
+                expenses={activeExpenses}
+                settings={settings}
+                onDelete={deleteExpense}
+              />
+            )}
+          </div>
         )}
       </main>
 
