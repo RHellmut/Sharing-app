@@ -15,7 +15,8 @@ function compressImage(file: File): Promise<string> {
     reader.onload = ev => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 900;
+        // Bilder auf max. 500 px + 60 % Qualität verkleinern → ~30–60 KB für Cloud-Sync
+        const MAX = 500;
         let { width, height } = img;
         if (width > height ? width > MAX : height > MAX) {
           if (width > height) { height = (height * MAX) / width; width = MAX; }
@@ -24,7 +25,7 @@ function compressImage(file: File): Promise<string> {
         const canvas = document.createElement('canvas');
         canvas.width = width; canvas.height = height;
         canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.72));
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
       };
       img.onerror = reject;
       img.src = ev.target!.result as string;

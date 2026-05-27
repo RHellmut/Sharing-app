@@ -14,7 +14,7 @@ type Tab = 'overview' | 'add' | 'history';
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
   const [showSettings, setShowSettings] = useState(false);
-  const { expenses, settings, addExpense, deleteExpense, updateSettings } = useStore();
+  const { expenses, settings, loading, error, addExpense, deleteExpense, updateSettings } = useStore();
 
   const thisMonth = expensesThisMonth(expenses);
   const recent = expenses.filter(e => e.categoryId !== 'ausgleich').slice(0, 4);
@@ -34,6 +34,29 @@ export default function App() {
       createdAt: new Date().toISOString(),
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-gray-400">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm">Wird geladen…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl p-6 shadow text-center max-w-sm">
+          <p className="text-3xl mb-3">⚠️</p>
+          <p className="font-semibold text-gray-800 mb-2">Verbindungsfehler</p>
+          <p className="text-sm text-gray-500">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto relative">
