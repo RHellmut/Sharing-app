@@ -33,6 +33,8 @@ export interface StoreResult {
   settings:           Settings;
   loading:            boolean;
   error:              string | null;
+  opError:            string | null;
+  clearOpError:       () => void;
   addExpense:         (e: Expense) => void;
   deleteExpense:      (id: string) => void;
   updateSettings:     (s: Settings) => void;
@@ -45,6 +47,7 @@ export function useStore(): StoreResult {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [opError, setOpError] = useState<string | null>(null);
 
   // Aktive Einträge = nach dem letzten Kassensturz (oder alle, wenn noch keiner)
   const activeExpenses = useMemo(() => {
@@ -135,10 +138,12 @@ export function useStore(): StoreResult {
     settings,
     loading,
     error,
+    opError,
+    clearOpError: () => setOpError(null),
 
     addExpense(expense: Expense) {
       setExpenses(prev => [expense, ...prev]);
-      void supabase.from('expenses').insert({
+      supabase.from('expenses').insert({
         id:            expense.id,
         description:   expense.description,
         amount:        expense.amount,
@@ -149,12 +154,24 @@ export function useStore(): StoreResult {
         receipt_image: expense.receiptImage ?? null,
         notes:         expense.notes ?? null,
         created_at:    expense.createdAt,
+      }).then(({ error: err }) => {
+        if (err) {
+          // Insert fehlgeschlagen → optimistisches Update rückgängig machen
+          setExpenses(prev => prev.filter(e => e.id !== expense.id));
+          setOpError(`Eintrag konnte nicht gespeichert werden: ${err.message}`);
+        }
       });
     },
 
     deleteExpense(id: string) {
+      const snapshot = expenses;
       setExpenses(prev => prev.filter(e => e.id !== id));
-      void supabase.from('expenses').delete().eq('id', id);
+      supabase.from('expenses').delete().eq('id', id).then(({ error: err }) => {
+        if (err) {
+          setExpenses(snapshot);
+          setOpError(`Eintrag konnte nicht gelöscht werden: ${err.message}`);
+        }
+      });
     },
 
     updateSettings(s: Settings) {
