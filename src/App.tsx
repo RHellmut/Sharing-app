@@ -24,6 +24,8 @@ export default function App() {
     settings,
     loading,
     error,
+    opError,
+    clearOpError,
     addExpense,
     deleteExpense,
     updateSettings,
@@ -95,6 +97,21 @@ export default function App() {
           <SettingsIcon size={20} className="text-gray-500" />
         </button>
       </header>
+
+      {/* ── Fehler-Banner (Speicherfehler) ── */}
+      {opError && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-3 flex items-start gap-3">
+          <span className="text-red-500 text-lg leading-none flex-shrink-0">⚠️</span>
+          <p className="flex-1 text-xs text-red-700 leading-snug">{opError}</p>
+          <button
+            onClick={clearOpError}
+            className="text-red-400 hover:text-red-600 text-sm font-bold flex-shrink-0 leading-none"
+            aria-label="Schließen"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ── Content ── */}
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-28">
