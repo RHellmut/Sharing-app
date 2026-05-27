@@ -83,6 +83,8 @@ export function useStore(): StoreResult {
     error,
 
     addExpense(expense: Expense) {
+      // Sofort lokal anzeigen (optimistisch), Supabase synct im Hintergrund
+      setExpenses(prev => [expense, ...prev]);
       void supabase.from('expenses').insert({
         id:            expense.id,
         description:   expense.description,
@@ -98,10 +100,14 @@ export function useStore(): StoreResult {
     },
 
     deleteExpense(id: string) {
+      // Sofort lokal entfernen, Supabase synct im Hintergrund
+      setExpenses(prev => prev.filter(e => e.id !== id));
       void supabase.from('expenses').delete().eq('id', id);
     },
 
     updateSettings(s: Settings) {
+      // Sofort lokal aktualisieren, Supabase synct im Hintergrund
+      setSettings(s);
       void supabase.from('settings')
         .update({ person1_name: s.person1Name, person2_name: s.person2Name })
         .eq('id', 1);

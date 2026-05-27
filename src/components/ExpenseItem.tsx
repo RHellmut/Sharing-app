@@ -49,23 +49,32 @@ export function ExpenseItem({ expense, settings, onDelete }: Props) {
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setExpanded(v => !v)}
-          className="w-full flex items-center gap-3 p-4 text-left"
-        >
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cat.bgColor}`}>
-            <span className="text-lg leading-none">{cat.icon}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-800 truncate">{expense.description}</p>
-            <p className="text-xs text-gray-400">{dateStr} · {paidByName}</p>
-          </div>
-          <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+        <div className="flex items-center gap-3 p-4">
+          <button
+            type="button"
+            onClick={() => setExpanded(v => !v)}
+            className="flex items-center gap-3 flex-1 min-w-0 text-left"
+          >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cat.bgColor}`}>
+              <span className="text-lg leading-none">{cat.icon}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-800 truncate">{expense.description}</p>
+              <p className="text-xs text-gray-400">{dateStr} · {paidByName}</p>
+            </div>
+          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <span className="font-bold text-gray-800">{formatCurrency(expense.amount)}</span>
-            {expanded ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
+            <button
+              type="button"
+              onClick={() => { if (window.confirm('Ausgabe wirklich löschen?')) onDelete(expense.id); }}
+              className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              aria-label="Löschen"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
-        </button>
+        </div>
 
         {expanded && (
           <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
@@ -87,26 +96,16 @@ export function ExpenseItem({ expense, settings, onDelete }: Props) {
               <p className="text-sm text-gray-500 italic">„{expense.notes}"</p>
             )}
 
-            <div className="flex items-center gap-4">
-              {expense.receiptImage && (
-                <button
-                  type="button"
-                  onClick={() => setShowReceipt(true)}
-                  className="flex items-center gap-1.5 text-emerald-600 text-sm font-medium"
-                >
-                  <ImageIcon size={15} />
-                  Beleg anzeigen
-                </button>
-              )}
+            {expense.receiptImage && (
               <button
                 type="button"
-                onClick={() => { if (window.confirm('Ausgabe wirklich löschen?')) onDelete(expense.id); }}
-                className="flex items-center gap-1.5 text-red-400 hover:text-red-600 text-sm font-medium ml-auto"
+                onClick={() => setShowReceipt(true)}
+                className="flex items-center gap-1.5 text-emerald-600 text-sm font-medium"
               >
-                <Trash2 size={15} />
-                Löschen
+                <ImageIcon size={15} />
+                Beleg anzeigen
               </button>
-            </div>
+            )}
           </div>
         )}
       </div>
