@@ -8,10 +8,21 @@ function fmt(amount: number): string {
   return amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EUR';
 }
 
-function fmtDate(iso: string, long = false): string {
-  return new Date(iso).toLocaleDateString('de-DE', long
-    ? { day: 'numeric', month: 'long', year: 'numeric' }
-    : { day: '2-digit', month: '2-digit', year: 'numeric' });
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 export function generateKassensturzPDF(
@@ -38,23 +49,33 @@ export function generateKassensturzPDF(
   doc.setFont('helvetica', 'normal');
   const periodStart = prevCreatedAt ? fmtDate(prevCreatedAt) : 'Beginn';
   const periodEnd   = fmtDate(kassensturz.createdAt);
-  doc.text(`${settings.person1Name} & ${settings.person2Name}   |   Zeitraum: ${periodStart} – ${periodEnd}`, MARGIN, 21);
+  doc.text(
+    `${settings.person1Name} & ${settings.person2Name}   |   Zeitraum: ${periodStart} - ${periodEnd}`,
+    MARGIN, 21,
+  );
 
   // ── Expense table ───────────────────────────────────────────
   doc.setTextColor(0, 0, 0);
 
-  const realExpenses = expenses.filter(e => e.categoryId !== 'ausgleich');
+  const real = expenses.filter(e => e.categoryId !== 'ausgleich');
 
-  const body = realExpenses.map(e => {
-    const cat      = CATEGORIES.find(c => c.id === e.categoryId)!;
-    const paidBy   = e.paidBy === 'person1' ? settings.person1Name : settings.person2Name;
-    const p1Share  = fmt(e.amount * e.splitRatio);
-    const p2Share  = fmt(e.amount * (1 - e.splitRatio));
-    const dateStr  = new Date(e.date + 'T12:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-    return [dateStr, e.description, cat.label, paidBy, fmt(e.amount), p1Share, p2Share];
+  const body = real.map(e => {
+    const cat    = CATEGORIES.find(c => c.id === e.categoryId)!;
+    const paidBy = e.paidBy === 'person1' ? settings.person1Name : settings.person2Name;
+    const dateStr = new Date(e.date + 'T12:00:00')
+      .toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+    return [
+      dateStr,
+      e.description,
+      cat.label,
+      paidBy,
+      fmt(e.amount),
+      fmt(e.amount * e.splitRatio),
+      fmt(e.amount * (1 - e.splitRatio)),
+    ];
   });
 
-  const tableResult = autoTable(doc, {
+  autoTable(doc, {
     head: [[
       'Datum', 'Beschreibung', 'Kategorie', 'Bezahlt von',
       'Betrag', settings.person1Name, settings.person2Name,
@@ -62,7 +83,11 @@ export function generateKassensturzPDF(
     body,
     startY: 34,
     margin: { left: MARGIN, right: MARGIN },
-    styles: { fontSize: 8.5, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, overflow: 'linebreak' },
+    styles: {
+      fontSize: 8.5,
+      cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
+      overflow: 'linebreak',
+    },
     headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
     alternateRowStyles: { fillColor: [240, 253, 244] },
     columnStyles: {
@@ -76,20 +101,27 @@ export function generateKassensturzPDF(
     },
   });
 
-  // ── Summary ─────────────────────────────────────────────────
-  const summaryY = (tableResult as unknown as { finalY: number }).finalY + 10;
+  // finalY from the plugin's state on the doc object
+  const tableEndY: number = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+  let summaryY = tableEndY + 10;
 
-  const total   = totalExpenses(realExpenses);
-  const p1Paid  = realExpenses.filter(e => e.paidBy === 'person1').reduce((s, e) => s + e.amount, 0);
-  const p2Paid  = realExpenses.filter(e => e.paidBy === 'person2').reduce((s, e) => s + e.amount, 0);
-  const p1Share = realExpenses.reduce((s, e) => s + e.amount * e.splitRatio, 0);
-  const p2Share = realExpenses.reduce((s, e) => s + e.amount * (1 - e.splitRatio), 0);
-  const balance = calculateBalance(realExpenses);
+  // If summary would overflow the page, add a new one
+  if (summaryY > 245) {
+    doc.addPage();
+    summaryY = 20;
+  }
 
-  // Summary box
+  // ── Summary box ─────────────────────────────────────────────
+  const total   = totalExpenses(real);
+  const p1Paid  = real.filter(e => e.paidBy === 'person1').reduce((s, e) => s + e.amount, 0);
+  const p2Paid  = real.filter(e => e.paidBy === 'person2').reduce((s, e) => s + e.amount, 0);
+  const p1Share = real.reduce((s, e) => s + e.amount * e.splitRatio, 0);
+  const p2Share = real.reduce((s, e) => s + e.amount * (1 - e.splitRatio), 0);
+  const balance = calculateBalance(real);
+
   doc.setDrawColor(229, 231, 235);
   doc.setFillColor(249, 250, 251);
-  doc.roundedRect(MARGIN, summaryY, CONTENT_W, 44, 3, 3, 'FD');
+  doc.roundedRect(MARGIN, summaryY, CONTENT_W, 46, 3, 3, 'FD');
 
   const col1 = MARGIN + 4;
   const col2 = MARGIN + CONTENT_W / 2 + 4;
@@ -104,23 +136,22 @@ export function generateKassensturzPDF(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(75, 85, 99);
-
   doc.text(`Gesamtausgaben: ${fmt(total)}`, col1, y);
   doc.text(`${settings.person1Name}: bezahlt ${fmt(p1Paid)}, Anteil ${fmt(p1Share)}`, col2, y);
   y += 6;
-  doc.text(`Eintraege: ${realExpenses.length}`, col1, y);
+  doc.text(`Eintraege: ${real.length}`, col1, y);
   doc.text(`${settings.person2Name}: bezahlt ${fmt(p2Paid)}, Anteil ${fmt(p2Share)}`, col2, y);
-  y += 8;
+  y += 9;
 
   if (balance.amount >= 0.01) {
     const debtor   = balance.debtorIsP1 ? settings.person1Name : settings.person2Name;
     const creditor = balance.debtorIsP1 ? settings.person2Name : settings.person1Name;
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(180, 83, 9); // amber-700
+    doc.setTextColor(180, 83, 9);
     doc.text(`Ausgleich: ${debtor} zahlt ${creditor} ${fmt(balance.amount)}`, col1, y);
   } else {
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(5, 150, 105); // emerald-600
+    doc.setTextColor(5, 150, 105);
     doc.text('Kein Ausgleich notwendig', col1, y);
   }
 
@@ -130,11 +161,10 @@ export function generateKassensturzPDF(
   doc.setTextColor(156, 163, 175);
   doc.text(
     `Erstellt am ${new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}`,
-    MARGIN,
-    290,
+    MARGIN, 290,
   );
 
-  // ── Save ────────────────────────────────────────────────────
-  const safeDate = fmtDate(kassensturz.createdAt).replace(/\./g, '-');
-  doc.save(`Kassensturz_${safeDate}.pdf`);
+  // ── Download ────────────────────────────────────────────────
+  const filename = `Kassensturz_${fmtDate(kassensturz.createdAt).replace(/\./g, '-')}.pdf`;
+  downloadBlob(doc.output('blob'), filename);
 }

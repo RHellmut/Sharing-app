@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, FileDown } from 'lucide-react';
 import { Expense, Settings, Kassensturz } from '../types';
 import { ExpenseList } from './ExpenseList';
 import { calculateBalance, totalExpenses, formatCurrency } from '../calculations';
+import { generateKassensturzPDF } from '../utils/generatePDF';
 
 interface Props {
   kassensturz: Kassensturz;
@@ -14,16 +15,9 @@ interface Props {
 
 export function KassensturzPeriod({ kassensturz, prevCreatedAt, expenses, settings, onDelete }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
 
-  const handlePDF = async () => {
-    setPdfLoading(true);
-    try {
-      const { generateKassensturzPDF } = await import('../utils/generatePDF');
-      generateKassensturzPDF(kassensturz, expenses, settings, prevCreatedAt);
-    } finally {
-      setPdfLoading(false);
-    }
+  const handlePDF = () => {
+    generateKassensturzPDF(kassensturz, expenses, settings, prevCreatedAt);
   };
 
   const fmtDate = (iso: string) =>
@@ -62,11 +56,10 @@ export function KassensturzPeriod({ kassensturz, prevCreatedAt, expenses, settin
           </div>
           <button
             onClick={handlePDF}
-            disabled={pdfLoading}
-            className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
           >
             <FileDown size={13} />
-            {pdfLoading ? '…' : 'PDF'}
+            PDF
           </button>
         </div>
 
