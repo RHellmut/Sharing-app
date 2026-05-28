@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive } from 'lucide-react';
 import { useStore } from './storage';
 import { BalanceCard } from './components/BalanceCard';
 import { AddExpenseForm } from './components/AddExpenseForm';
 import { ExpenseList } from './components/ExpenseList';
+import { KassensturzPeriod } from './components/KassensturzPeriod';
 import { SettingsModal } from './components/SettingsModal';
 import { calculateBalance, expensesThisMonth, totalExpenses, formatCurrency } from './calculations';
 import { CATEGORIES } from './constants';
@@ -18,6 +19,7 @@ export default function App() {
   const [showArchive, setShowArchive] = useState(false);
 
   const {
+    expenses,
     activeExpenses,
     archivedExpenses,
     kassensturzList,
@@ -31,6 +33,21 @@ export default function App() {
     updateSettings,
     performKassensturz,
   } = useStore();
+
+  const kassensturzPeriods = useMemo(() =>
+    kassensturzList.map((ks, index) => {
+      const prevKs = kassensturzList[index + 1];
+      return {
+        kassensturz: ks,
+        prevCreatedAt: prevKs?.createdAt ?? null,
+        expenses: expenses.filter(e =>
+          e.createdAt <= ks.createdAt &&
+          (!prevKs || e.createdAt > prevKs.createdAt)
+        ),
+      };
+    }),
+    [expenses, kassensturzList],
+  );
 
   const thisMonth = expensesThisMonth(activeExpenses);
   const recent = activeExpenses.filter(e => e.categoryId !== 'ausgleich').slice(0, 4);
@@ -290,26 +307,18 @@ export default function App() {
             )}
 
             {showArchive ? (
-              <>
-                {kassensturzList.length > 0 && (
-                  <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-2.5 flex items-center gap-2">
-                    <Archive size={14} className="text-amber-500 flex-shrink-0" />
-                    <p className="text-xs text-amber-700">
-                      Kassensturz vom{' '}
-                      <strong>
-                        {new Date(kassensturzList[0].createdAt).toLocaleDateString('de-DE', {
-                          day: 'numeric', month: 'long', year: 'numeric',
-                        })}
-                      </strong>
-                    </p>
-                  </div>
-                )}
-                <ExpenseList
-                  expenses={archivedExpenses}
-                  settings={settings}
-                  onDelete={deleteExpense}
-                />
-              </>
+              <div className="space-y-3">
+                {kassensturzPeriods.map(period => (
+                  <KassensturzPeriod
+                    key={period.kassensturz.id}
+                    kassensturz={period.kassensturz}
+                    prevCreatedAt={period.prevCreatedAt}
+                    expenses={period.expenses}
+                    settings={settings}
+                    onDelete={deleteExpense}
+                  />
+                ))}
+              </div>
             ) : (
               <ExpenseList
                 expenses={activeExpenses}
