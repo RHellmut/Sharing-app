@@ -147,8 +147,10 @@ export function useStore(): StoreResult {
     clearOpError: () => setOpError(null),
 
     addExpense(expense: Expense) {
+      console.log('[addExpense] START:', expense.description, expense.amount); // sync – erscheint sofort
       setExpenses(prev => [expense, ...prev]);
       void (async () => {
+        console.log('[addExpense] Sende an Supabase...');
         try {
           const { error: err } = await supabase.from('expenses').insert({
             id:            expense.id,
