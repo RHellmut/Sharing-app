@@ -103,7 +103,7 @@ export default function App() {
       {/* ── Header ── */}
       <header className="bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-40">
         <div>
-          <h1 className="text-lg font-bold text-gray-800">💰 Kosten teilen</h1>
+          <h1 className="text-lg font-bold text-gray-800">Catriver Cost</h1>
           <p className="text-xs text-gray-400">{settings.person1Name} &amp; {settings.person2Name}</p>
         </div>
         <button
