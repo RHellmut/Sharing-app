@@ -72,7 +72,12 @@ export function useStore(): StoreResult {
         .select('*')
         .order('created_at', { ascending: false });
       if (!mounted) return;
-      if (err) { setError(err.message); return; }
+      if (err) {
+        console.error('[fetchExpenses] Fehler:', err.message, err);
+        setError(err.message);
+        return;
+      }
+      console.log('[fetchExpenses] Geladen:', (data ?? []).length, 'Einträge');
       setExpenses((data ?? []).map(dbToExpense));
     };
 
@@ -143,35 +148,54 @@ export function useStore(): StoreResult {
 
     addExpense(expense: Expense) {
       setExpenses(prev => [expense, ...prev]);
-      supabase.from('expenses').insert({
-        id:            expense.id,
-        description:   expense.description,
-        amount:        expense.amount,
-        category_id:   expense.categoryId,
-        paid_by:       expense.paidBy,
-        split_ratio:   expense.splitRatio,
-        date:          expense.date,
-        receipt_image: expense.receiptImage ?? null,
-        notes:         expense.notes ?? null,
-        created_at:    expense.createdAt,
-      }).then(({ error: err }) => {
-        if (err) {
-          // Insert fehlgeschlagen → optimistisches Update rückgängig machen
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('expenses').insert({
+            id:            expense.id,
+            description:   expense.description,
+            amount:        expense.amount,
+            category_id:   expense.categoryId,
+            paid_by:       expense.paidBy,
+            split_ratio:   expense.splitRatio,
+            date:          expense.date,
+            receipt_image: expense.receiptImage ?? null,
+            notes:         expense.notes ?? null,
+            created_at:    expense.createdAt,
+          });
+          if (err) {
+            console.error('[addExpense] Supabase-Fehler:', err.message, err);
+            setExpenses(prev => prev.filter(e => e.id !== expense.id));
+            setOpError(`Eintrag konnte nicht gespeichert werden: ${err.message}`);
+          } else {
+            console.log('[addExpense] Gespeichert:', expense.id, expense.description);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error('[addExpense] Netzwerkfehler:', msg);
           setExpenses(prev => prev.filter(e => e.id !== expense.id));
-          setOpError(`Eintrag konnte nicht gespeichert werden: ${err.message}`);
+          setOpError(`Netzwerkfehler beim Speichern – Internetverbindung prüfen.`);
         }
-      });
+      })();
     },
 
     deleteExpense(id: string) {
       const snapshot = expenses;
       setExpenses(prev => prev.filter(e => e.id !== id));
-      supabase.from('expenses').delete().eq('id', id).then(({ error: err }) => {
-        if (err) {
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('expenses').delete().eq('id', id);
+          if (err) {
+            console.error('[deleteExpense] Supabase-Fehler:', err.message);
+            setExpenses(snapshot);
+            setOpError(`Eintrag konnte nicht gelöscht werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error('[deleteExpense] Netzwerkfehler:', msg);
           setExpenses(snapshot);
-          setOpError(`Eintrag konnte nicht gelöscht werden: ${err.message}`);
+          setOpError(`Netzwerkfehler beim Löschen – Internetverbindung prüfen.`);
         }
-      });
+      })();
     },
 
     updateSettings(s: Settings) {
