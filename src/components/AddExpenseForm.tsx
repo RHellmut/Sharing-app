@@ -38,7 +38,7 @@ function compressImage(file: File): Promise<string> {
 export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [categoryId, setCategoryId] = useState<CategoryId>('lebensmittel');
+  const [categoryId, setCategoryId] = useState<CategoryId>('rewe');
   const [paidBy, setPaidBy] = useState<PersonId>('person1');
   const [splitMode, setSplitMode] = useState<'half' | 'custom'>('half');
   const [p1Split, setP1Split] = useState(50);

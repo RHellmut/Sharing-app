@@ -1,12 +1,13 @@
 export type PersonId = 'person1' | 'person2';
 
 export type CategoryId =
-  | 'lebensmittel'
-  | 'haushalt'
-  | 'restaurant'
-  | 'freizeit'
-  | 'transport'
-  | 'gesundheit'
+  | 'koofland'
+  | 'aldi'
+  | 'netto'
+  | 'denns'
+  | 'edeka'
+  | 'rewe'
+  | 'dm'
   | 'sonstiges'
   | 'ausgleich';
 
