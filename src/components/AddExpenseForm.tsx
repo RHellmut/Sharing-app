@@ -247,13 +247,12 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
       {/* Date */}
       <div>
         <label className="text-sm font-medium text-gray-600 block mb-1.5">Datum</label>
-        <button
-          type="button"
+        <div
           onClick={openDatePicker}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-gray-700 text-base text-left"
+          className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-gray-700 text-base cursor-pointer"
         >
           {new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
-        </button>
+        </div>
         <input
           ref={dateRef}
           type="date"
