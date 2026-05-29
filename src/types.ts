@@ -9,6 +9,7 @@ export type CategoryId =
   | 'rewe'
   | 'dm'
   | 'sonstiges'
+  | 'urlaub'
   | 'ausgleich';
 
 export interface Expense {
