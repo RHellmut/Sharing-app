@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Trash2, ImageIcon } from 'lucide-react';
 import { Expense, Settings } from '../types';
 import { CATEGORIES } from '../constants';
 import { formatCurrency } from '../calculations';
+import { CategoryIcon } from './CategoryIcon';
 
 interface Props {
   expense: Expense;
@@ -56,7 +57,7 @@ export function ExpenseItem({ expense, settings, onDelete }: Props) {
             className="flex items-center gap-3 flex-1 min-w-0 text-left"
           >
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cat.bgColor}`}>
-              <span className="text-lg leading-none">{cat.icon}</span>
+              <CategoryIcon cat={cat} imgClassName="w-6 h-6" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-800 truncate">{expense.description}</p>

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Camera, X } from 'lucide-react';
 import { Expense, PersonId, CategoryId, Settings } from '../types';
 import { USER_CATEGORIES } from '../constants';
+import { CategoryIcon } from './CategoryIcon';
 
 interface Props {
   settings: Settings;
@@ -134,7 +135,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
                   : 'border-gray-100 bg-gray-50 hover:border-gray-200'
               }`}
             >
-              <span className="text-xl leading-none">{cat.icon}</span>
+              <CategoryIcon cat={cat} imgClassName="w-7 h-7" />
               <span className="text-[10px] text-gray-600 leading-tight text-center">{cat.label}</span>
             </button>
           ))}

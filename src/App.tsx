@@ -9,6 +9,7 @@ import { ShoppingList } from './components/ShoppingList';
 import { SettingsModal } from './components/SettingsModal';
 import { expensesThisMonth, totalExpenses, formatCurrency } from './calculations';
 import { CATEGORIES } from './constants';
+import { CategoryIcon } from './components/CategoryIcon';
 
 type Tab = 'overview' | 'add' | 'history' | 'shopping';
 
@@ -156,7 +157,9 @@ export default function App() {
                     const pct = Math.round((total / monthTotal) * 100);
                     return (
                       <div key={cat.id} className="flex items-center gap-2">
-                        <span className="text-base w-6 flex-shrink-0">{cat.icon}</span>
+                        <span className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                          <CategoryIcon cat={cat} imgClassName="w-5 h-5" />
+                        </span>
                         <div className="flex-1">
                           <div className="flex justify-between text-xs mb-0.5">
                             <span className="text-gray-600">{cat.label}</span>
@@ -188,7 +191,7 @@ export default function App() {
                     return (
                       <div key={e.id} className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm border border-gray-100">
                         <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${cat.bgColor}`}>
-                          {cat.icon}
+                          <CategoryIcon cat={cat} imgClassName="w-6 h-6" />
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">{e.description}</p>
