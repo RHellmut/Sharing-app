@@ -56,7 +56,7 @@ export function KassensturzPeriod({ kassensturz, prevCreatedAt, expenses, settin
             <div className="flex items-center gap-3 mt-1">
               <span className="text-xs text-gray-500">{real.length} Einträge</span>
               <span className="text-xs font-medium text-gray-700">{formatCurrency(total)}</span>
-              <span className={`text-xs ${balance.amount >= 0.01 ? 'text-amber-700' : 'text-emerald-600'}`}>
+              <span className={`text-xs ${balance.amount >= 0.01 ? 'text-amber-700' : 'text-slate-600'}`}>
                 {balanceLabel}
               </span>
             </div>

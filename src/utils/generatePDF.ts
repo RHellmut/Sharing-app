@@ -37,7 +37,7 @@ export function generateKassensturzPDF(
   const CONTENT_W = PAGE_W - MARGIN * 2;
 
   // ── Header bar ──────────────────────────────────────────────
-  doc.setFillColor(16, 185, 129); // emerald-500
+  doc.setFillColor(30, 41, 59); // slate-800
   doc.rect(0, 0, PAGE_W, 28, 'F');
 
   doc.setTextColor(255, 255, 255);

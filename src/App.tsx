@@ -66,7 +66,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-gray-400">
-          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-10 h-10 border-4 border-slate-700 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm">Wird geladen…</p>
         </div>
       </div>
@@ -163,7 +163,7 @@ export default function App() {
                             <span className="font-medium text-gray-800">{formatCurrency(total)}</span>
                           </div>
                           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-slate-500 rounded-full" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       </div>
@@ -178,7 +178,7 @@ export default function App() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-sm font-semibold text-gray-600">Letzte Ausgaben</h3>
-                  <button onClick={() => setTab('history')} className="text-xs text-emerald-600 font-medium">
+                  <button onClick={() => setTab('history')} className="text-xs text-slate-700 font-medium">
                     Alle anzeigen
                   </button>
                 </div>
@@ -232,7 +232,7 @@ export default function App() {
                 <button
                   onClick={() => setShowArchive(false)}
                   className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-                    !showArchive ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
+                    !showArchive ? 'bg-slate-700 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
                   }`}
                 >
                   Aktuell ({activeExpenses.length})
@@ -292,7 +292,7 @@ export default function App() {
         <button
           onClick={() => setTab('overview')}
           className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors ${
-            tab === 'overview' ? 'text-emerald-600' : 'text-gray-400'
+            tab === 'overview' ? 'text-slate-700' : 'text-gray-400'
           }`}
         >
           <LayoutDashboard size={20} />
@@ -302,7 +302,7 @@ export default function App() {
         <button
           onClick={() => setTab('history')}
           className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors ${
-            tab === 'history' ? 'text-emerald-600' : 'text-gray-400'
+            tab === 'history' ? 'text-slate-700' : 'text-gray-400'
           }`}
         >
           <List size={20} />
@@ -313,7 +313,7 @@ export default function App() {
           <button
             onClick={() => setTab('add')}
             className={`w-14 h-14 -mt-5 rounded-full flex items-center justify-center shadow-lg transition-all ${
-              tab === 'add' ? 'bg-emerald-600 scale-105' : 'bg-emerald-500 hover:bg-emerald-600'
+              tab === 'add' ? 'bg-slate-800 scale-105' : 'bg-slate-700 hover:bg-slate-800'
             }`}
           >
             <Plus size={28} className="text-white" />
@@ -323,12 +323,12 @@ export default function App() {
         <button
           onClick={() => setTab('shopping')}
           className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
-            tab === 'shopping' ? 'text-emerald-600' : 'text-gray-400'
+            tab === 'shopping' ? 'text-slate-700' : 'text-gray-400'
           }`}
         >
           <ShoppingCart size={20} />
           {shoppingItems.filter(i => !i.checked).length > 0 && (
-            <span className="absolute top-2 right-4 w-4 h-4 bg-emerald-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+            <span className="absolute top-2 right-4 w-4 h-4 bg-slate-700 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
               {shoppingItems.filter(i => !i.checked).length}
             </span>
           )}

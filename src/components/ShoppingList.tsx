@@ -136,7 +136,7 @@ function Item({ item, onToggle, onDelete }: {
       <button
         onClick={() => onToggle(item.id)}
         className={`flex-shrink-0 transition-colors ${
-          item.checked ? 'text-emerald-500' : 'text-gray-300 hover:text-emerald-400'
+          item.checked ? 'text-slate-600' : 'text-gray-300 hover:text-slate-500'
         }`}
       >
         {item.checked
@@ -174,12 +174,12 @@ const InputBar = React.forwardRef<HTMLInputElement, {
         onChange={e => onChange(e.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Artikel hinzufügen…"
-        className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-slate-500"
       />
       <button
         onClick={onAdd}
         disabled={!value.trim()}
-        className="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
+        className="w-12 h-12 bg-slate-700 hover:bg-slate-800 disabled:opacity-40 text-white rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
       >
         <Plus size={22} />
       </button>

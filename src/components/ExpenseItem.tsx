@@ -100,7 +100,7 @@ export function ExpenseItem({ expense, settings, onDelete }: Props) {
               <button
                 type="button"
                 onClick={() => setShowReceipt(true)}
-                className="flex items-center gap-1.5 text-emerald-600 text-sm font-medium"
+                className="flex items-center gap-1.5 text-slate-700 text-sm font-medium"
               >
                 <ImageIcon size={15} />
                 Beleg anzeigen

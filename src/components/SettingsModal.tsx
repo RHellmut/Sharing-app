@@ -24,7 +24,7 @@ export function SettingsModal({ settings, onUpdate, onClose }: Props) {
       <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Users size={20} className="text-emerald-500" />
+            <Users size={20} className="text-slate-600" />
             Einstellungen
           </h2>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
@@ -40,7 +40,7 @@ export function SettingsModal({ settings, onUpdate, onClose }: Props) {
               value={p1}
               onChange={e => setP1(e.target.value)}
               placeholder="Dein Name"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-500"
             />
           </div>
           <div>
@@ -50,7 +50,7 @@ export function SettingsModal({ settings, onUpdate, onClose }: Props) {
               value={p2}
               onChange={e => setP2(e.target.value)}
               placeholder="Name deiner Freundin"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-500"
             />
           </div>
         </div>
@@ -58,7 +58,7 @@ export function SettingsModal({ settings, onUpdate, onClose }: Props) {
         <div className="p-5 border-t border-gray-100">
           <button
             onClick={handleSave}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 transition-colors"
+            className="w-full bg-slate-700 hover:bg-slate-800 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 transition-colors"
           >
             <Save size={18} />
             Speichern

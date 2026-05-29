@@ -4,8 +4,8 @@
   "description": "Gemeinsame Ausgaben einfach aufteilen",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#14532d",
-  "theme_color": "#14532d",
+  "background_color": "#1e293b",
+  "theme_color": "#1e293b",
   "orientation": "portrait",
   "icons": [
     {
