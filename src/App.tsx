@@ -101,7 +101,8 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto relative">
 
       {/* ── Header ── */}
-      <header className="bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-40">
+      <header className="bg-white border-b border-gray-100 px-4 pb-4 flex items-center justify-between sticky top-0 z-40"
+              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}>
         <div>
           <h1 className="text-lg font-bold text-gray-800">Catriver Cost</h1>
           <p className="text-xs text-gray-400">{settings.person1Name} &amp; {settings.person2Name}</p>
@@ -331,7 +332,7 @@ export default function App() {
       </main>
 
       {/* ── Bottom Nav ── */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 flex items-stretch z-40">
+      <nav className="safe-pb fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 flex items-stretch z-40">
         <button
           onClick={() => setTab('overview')}
           className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors ${
