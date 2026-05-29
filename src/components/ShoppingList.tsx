@@ -174,7 +174,7 @@ const InputBar = React.forwardRef<HTMLInputElement, {
         onChange={e => onChange(e.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Artikel hinzufügen…"
-        className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500"
       />
       <button
         onClick={onAdd}
