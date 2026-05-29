@@ -10,7 +10,7 @@ export interface CategoryDef {
 }
 
 export const CATEGORIES: CategoryDef[] = [
-  { id: 'koofland', label: 'Kaufland', icon: '🏬', logoUrl: '/logos/kaufland.svg', bgColor: 'bg-red-100',    textColor: 'text-red-700'    },
+  { id: 'koofland', label: 'Koofland', icon: '🏬', logoUrl: '/logos/kaufland.svg', bgColor: 'bg-red-100',    textColor: 'text-red-700'    },
   { id: 'aldi',     label: 'Aldi',     icon: '🧺', logoUrl: '/logos/aldi.svg',     bgColor: 'bg-blue-100',   textColor: 'text-blue-700'   },
   { id: 'netto',    label: 'Netto',    icon: '🛍️', logoUrl: '/logos/netto.svg',    bgColor: 'bg-gray-900',   textColor: 'text-yellow-400' },
   { id: 'denns',    label: 'Denns',    icon: '🌿', logoUrl: '/logos/denns.svg',    bgColor: 'bg-green-100',  textColor: 'text-green-700'  },
