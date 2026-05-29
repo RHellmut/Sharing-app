@@ -275,8 +275,21 @@ export function useStore(): StoreResult {
     },
 
     deleteShoppingItem(id: string) {
+      const snapshot = shoppingItems;
       setShoppingItems(prev => prev.filter(i => i.id !== id));
-      void supabase.from('shopping_items').delete().eq('id', id);
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('shopping_items').delete().eq('id', id);
+          if (err) {
+            setShoppingItems(snapshot);
+            setOpError(`Artikel konnte nicht gelöscht werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setShoppingItems(snapshot);
+          setOpError(`Netzwerkfehler beim Löschen. (${msg})`);
+        }
+      })();
     },
 
     async resetShoppingList() {
