@@ -253,7 +253,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
           readOnly
           value={new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
           onClick={openDatePicker}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-gray-700 text-base cursor-pointer focus:outline-none"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-500 cursor-pointer"
           style={{ caretColor: 'transparent' }}
         />
       </div>
