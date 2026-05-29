@@ -234,9 +234,9 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
       </div>
 
       {/* Date */}
-      <div>
+      <div className="w-full">
         <label className="text-sm font-medium text-gray-600 block mb-1.5">Datum</label>
-        <div className="relative">
+        <div className="relative w-full overflow-hidden">
           <div className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-gray-700 text-base">
             {new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
           </div>
@@ -244,7 +244,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
             type="date"
             value={date}
             onChange={e => setDate(e.target.value)}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            className="absolute inset-0 opacity-0 cursor-pointer"
           />
         </div>
       </div>
