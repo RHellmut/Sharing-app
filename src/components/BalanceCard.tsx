@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { CheckCircle2, ArrowRight, HandCoins, X, Palmtree } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Archive, X, Palmtree } from 'lucide-react';
 import { Expense, Settings } from '../types';
 import { calculateBalance, formatCurrency } from '../calculations';
 
 interface Props {
   expenses: Expense[];
   settings: Settings;
-  onSettle: () => void;
+  onKassensturz: () => Promise<void>;
 }
 
-export function BalanceCard({ expenses, settings, onSettle }: Props) {
-  const [confirming, setConfirming]     = useState(false);
-  const [vacationOpen, setVacationOpen] = useState(false);
+export function BalanceCard({ expenses, settings, onKassensturz }: Props) {
+  const [confirmingKassensturz, setConfirmingKassensturz] = useState(false);
+  const [vacationOpen, setVacationOpen]                   = useState(false);
   const balance = calculateBalance(expenses);
 
   const vacationButton = (
@@ -52,11 +52,18 @@ export function BalanceCard({ expenses, settings, onSettle }: Props) {
       <>
         <div className="relative bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg">
           {vacationButton}
-          <div className="flex flex-col items-center gap-2 py-2">
+          <div className="flex flex-col items-center gap-2 py-2 mb-4">
             <CheckCircle2 size={48} className="opacity-90" />
             <p className="text-xl font-semibold">Alles ausgeglichen!</p>
             <p className="text-emerald-100 text-sm">Keine offenen Schulden</p>
           </div>
+          <KassensturzButton
+            count={expenses.length}
+            confirming={confirmingKassensturz}
+            onConfirm={() => setConfirmingKassensturz(true)}
+            onCancel={() => setConfirmingKassensturz(false)}
+            onExecute={async () => { await onKassensturz(); setConfirmingKassensturz(false); }}
+          />
         </div>
         {overlay}
       </>
@@ -79,37 +86,57 @@ export function BalanceCard({ expenses, settings, onSettle }: Props) {
           <span className="font-semibold">{creditorName}</span>
         </div>
 
-        {!confirming ? (
-          <button
-            onClick={() => setConfirming(true)}
-            className="w-full flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 rounded-xl py-2.5 font-medium transition-colors text-sm"
-          >
-            <HandCoins size={16} />
-            Ausgleich erstellen
-          </button>
-        ) : (
-          <div className="bg-white/20 rounded-xl p-3 space-y-2">
-            <p className="text-sm text-center">
-              {debtorName} bezahlte {creditorName} <strong>{formatCurrency(balance.amount)}</strong>?
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConfirming(false)}
-                className="flex-1 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-sm font-medium transition-colors"
-              >
-                Nein
-              </button>
-              <button
-                onClick={() => { onSettle(); setConfirming(false); }}
-                className="flex-1 py-2 rounded-lg bg-white font-semibold text-emerald-700 hover:bg-emerald-50 text-sm transition-colors"
-              >
-                Ja, bestätigen
-              </button>
-            </div>
-          </div>
-        )}
+        <KassensturzButton
+          count={expenses.length}
+          confirming={confirmingKassensturz}
+          onConfirm={() => setConfirmingKassensturz(true)}
+          onCancel={() => setConfirmingKassensturz(false)}
+          onExecute={async () => { await onKassensturz(); setConfirmingKassensturz(false); }}
+        />
       </div>
       {overlay}
     </>
+  );
+}
+
+function KassensturzButton({ count, confirming, onConfirm, onCancel, onExecute }: {
+  count: number;
+  confirming: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  onExecute: () => Promise<void>;
+}) {
+  if (!confirming) {
+    return (
+      <button
+        onClick={onConfirm}
+        disabled={count === 0}
+        className="w-full flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl py-2.5 font-medium transition-colors text-sm"
+      >
+        <Archive size={16} />
+        Kassensturz
+      </button>
+    );
+  }
+  return (
+    <div className="bg-white/20 rounded-xl p-3 space-y-2">
+      <p className="text-sm text-center">
+        {count} {count === 1 ? 'Eintrag wird' : 'Einträge werden'} archiviert und der Saldo zurückgesetzt.
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-2 rounded-lg bg-white/20 hover:bg-white/30 text-sm font-medium transition-colors"
+        >
+          Abbrechen
+        </button>
+        <button
+          onClick={onExecute}
+          className="flex-1 py-2 rounded-lg bg-white font-semibold text-emerald-700 hover:bg-emerald-50 text-sm transition-colors"
+        >
+          Kassensturz machen
+        </button>
+      </div>
+    </div>
   );
 }
