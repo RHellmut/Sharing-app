@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Camera, X } from 'lucide-react';
 import { Expense, PersonId, CategoryId, Settings } from '../types';
 import { USER_CATEGORIES } from '../constants';
@@ -247,20 +248,26 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
       {/* Date */}
       <div>
         <label className="text-sm font-medium text-gray-600 block mb-1.5">Datum</label>
-        <div
+        <input
+          type="text"
+          readOnly
+          value={new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
           onClick={openDatePicker}
-          className="border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-gray-700 text-base cursor-pointer"
-        >
-          {new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
-        </div>
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-gray-700 text-base cursor-pointer focus:outline-none"
+          style={{ caretColor: 'transparent' }}
+        />
+      </div>
+
+      {createPortal(
         <input
           ref={dateRef}
           type="date"
           value={date}
           onChange={e => setDate(e.target.value)}
-          style={{ position: 'fixed', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
-        />
-      </div>
+          style={{ position: 'fixed', top: 0, left: 0, width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
+        />,
+        document.body
+      )}
 
       {/* Receipt */}
       <div>
