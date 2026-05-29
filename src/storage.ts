@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Expense, Settings, Kassensturz } from './types';
+import { Expense, Settings, Kassensturz, ShoppingItem } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 import { supabase } from './supabaseClient';
 
@@ -25,39 +25,52 @@ function dbToKassensturz(row: Record<string, unknown>): Kassensturz {
   };
 }
 
+function dbToShoppingItem(row: Record<string, unknown>): ShoppingItem {
+  return {
+    id:        row.id as string,
+    text:      row.text as string,
+    checked:   row.checked as boolean,
+    createdAt: row.created_at as string,
+  };
+}
+
 export interface StoreResult {
-  expenses:           Expense[];
-  activeExpenses:     Expense[];
-  archivedExpenses:   Expense[];
-  kassensturzList:    Kassensturz[];
-  settings:           Settings;
-  loading:            boolean;
-  error:              string | null;
-  opError:             string | null;
-  clearOpError:        () => void;
-  addExpense:          (e: Expense) => void;
-  deleteExpense:       (id: string) => void;
-  updateSettings:      (s: Settings) => void;
-  performKassensturz:  () => Promise<void>;
-  deleteKassensturz:   (ksId: string, expenseIds: string[]) => Promise<void>;
+  expenses:             Expense[];
+  activeExpenses:       Expense[];
+  archivedExpenses:     Expense[];
+  kassensturzList:      Kassensturz[];
+  shoppingItems:        ShoppingItem[];
+  settings:             Settings;
+  loading:              boolean;
+  error:                string | null;
+  opError:              string | null;
+  clearOpError:         () => void;
+  addExpense:           (e: Expense) => void;
+  deleteExpense:        (id: string) => void;
+  updateSettings:       (s: Settings) => void;
+  performKassensturz:   () => Promise<void>;
+  deleteKassensturz:    (ksId: string, expenseIds: string[]) => Promise<void>;
+  addShoppingItem:      (text: string) => void;
+  toggleShoppingItem:   (id: string) => void;
+  deleteShoppingItem:   (id: string) => void;
+  resetShoppingList:    () => Promise<void>;
 }
 
 export function useStore(): StoreResult {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [kassensturzList, setKassensturzList] = useState<Kassensturz[]>([]);
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
 
-  // Aktive Einträge = nach dem letzten Kassensturz (oder alle, wenn noch keiner)
   const activeExpenses = useMemo(() => {
-    const last = kassensturzList[0]; // absteigend sortiert → [0] ist der neueste
+    const last = kassensturzList[0];
     if (!last) return expenses;
     return expenses.filter(e => e.createdAt > last.createdAt);
   }, [expenses, kassensturzList]);
 
-  // Archivierte Einträge = vor dem letzten Kassensturz
   const archivedExpenses = useMemo(() => {
     const last = kassensturzList[0];
     if (!last) return [];
@@ -73,24 +86,15 @@ export function useStore(): StoreResult {
         .select('*')
         .order('created_at', { ascending: false });
       if (!mounted) return;
-      if (err) {
-        console.error('[fetchExpenses] Fehler:', err.message, err);
-        setError(err.message);
-        return;
-      }
-      console.log('[fetchExpenses] Geladen:', (data ?? []).length, 'Einträge');
+      if (err) { setError(err.message); return; }
       setExpenses((data ?? []).map(dbToExpense));
     };
 
     const fetchSettings = async () => {
       const { data } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('id', 1)
-        .single();
+        .from('settings').select('*').eq('id', 1).single();
       if (!mounted || !data) return;
       const names = { person1Name: data.person1_name, person2Name: data.person2_name };
-      // Alte Standard-Namen automatisch auf René/Lisa migrieren
       if (names.person1Name === 'Du' && names.person2Name === 'Freundin') {
         setSettings(DEFAULT_SETTINGS);
         void supabase.from('settings')
@@ -103,30 +107,34 @@ export function useStore(): StoreResult {
 
     const fetchKassensturz = async () => {
       const { data } = await supabase
-        .from('kassensturz')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from('kassensturz').select('*').order('created_at', { ascending: false });
       if (!mounted) return;
       setKassensturzList((data ?? []).map(dbToKassensturz));
     };
 
-    // Erstes Laden
-    void Promise.all([fetchExpenses(), fetchSettings(), fetchKassensturz()]).finally(() => {
-      if (mounted) setLoading(false);
-    });
+    const fetchShoppingItems = async () => {
+      const { data } = await supabase
+        .from('shopping_items').select('*').order('created_at', { ascending: true });
+      if (!mounted) return;
+      setShoppingItems((data ?? []).map(dbToShoppingItem));
+    };
 
-    // Echtzeit-Subscriptions → beide Handys synken automatisch
+    void Promise.all([
+      fetchExpenses(), fetchSettings(), fetchKassensturz(), fetchShoppingItems(),
+    ]).finally(() => { if (mounted) setLoading(false); });
+
     const channel = supabase
       .channel('db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, fetchExpenses)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'kassensturz' }, fetchKassensturz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items' }, fetchShoppingItems)
       .subscribe();
 
-    // Polling-Fallback alle 30 Sekunden (falls Realtime nicht konfiguriert ist)
     const poll = setInterval(() => {
       void fetchExpenses();
       void fetchKassensturz();
+      void fetchShoppingItems();
     }, 30_000);
 
     return () => {
@@ -141,6 +149,7 @@ export function useStore(): StoreResult {
     activeExpenses,
     archivedExpenses,
     kassensturzList,
+    shoppingItems,
     settings,
     loading,
     error,
@@ -148,10 +157,9 @@ export function useStore(): StoreResult {
     clearOpError: () => setOpError(null),
 
     addExpense(expense: Expense) {
-      console.log('[addExpense] START:', expense.description, expense.amount); // sync – erscheint sofort
+      console.log('[addExpense] START:', expense.description, expense.amount);
       setExpenses(prev => [expense, ...prev]);
       void (async () => {
-        console.log('[addExpense] Sende an Supabase...');
         try {
           const { error: err } = await supabase.from('expenses').insert({
             id:            expense.id,
@@ -166,17 +174,13 @@ export function useStore(): StoreResult {
             created_at:    expense.createdAt,
           });
           if (err) {
-            console.error('[addExpense] Supabase-Fehler:', err.message, err);
             setExpenses(prev => prev.filter(e => e.id !== expense.id));
             setOpError(`Eintrag konnte nicht gespeichert werden: ${err.message}`);
-          } else {
-            console.log('[addExpense] Gespeichert:', expense.id, expense.description);
           }
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.error('[addExpense] Netzwerkfehler:', msg);
           setExpenses(prev => prev.filter(e => e.id !== expense.id));
-          setOpError(`Netzwerkfehler beim Speichern – Internetverbindung prüfen.`);
+          setOpError(`Netzwerkfehler beim Speichern – Internetverbindung prüfen. (${msg})`);
         }
       })();
     },
@@ -188,15 +192,13 @@ export function useStore(): StoreResult {
         try {
           const { error: err } = await supabase.from('expenses').delete().eq('id', id);
           if (err) {
-            console.error('[deleteExpense] Supabase-Fehler:', err.message);
             setExpenses(snapshot);
             setOpError(`Eintrag konnte nicht gelöscht werden: ${err.message}`);
           }
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.error('[deleteExpense] Netzwerkfehler:', msg);
           setExpenses(snapshot);
-          setOpError(`Netzwerkfehler beim Löschen – Internetverbindung prüfen.`);
+          setOpError(`Netzwerkfehler beim Löschen – Internetverbindung prüfen. (${msg})`);
         }
       })();
     },
@@ -215,8 +217,7 @@ export function useStore(): StoreResult {
       };
       setKassensturzList(prev => [newKs, ...prev]);
       const { error: err } = await supabase.from('kassensturz').insert({
-        id:         newKs.id,
-        created_at: newKs.createdAt,
+        id: newKs.id, created_at: newKs.createdAt,
       });
       if (err) {
         setKassensturzList(prev => prev.filter(k => k.id !== newKs.id));
@@ -227,7 +228,6 @@ export function useStore(): StoreResult {
     async deleteKassensturz(ksId: string, expenseIds: string[]) {
       const prevExpenses = expenses;
       const prevKsList   = kassensturzList;
-      // Optimistic
       setExpenses(prev => prev.filter(e => !expenseIds.includes(e.id)));
       setKassensturzList(prev => prev.filter(k => k.id !== ksId));
       try {
@@ -242,6 +242,49 @@ export function useStore(): StoreResult {
         setKassensturzList(prevKsList);
         const msg = err instanceof Error ? err.message : String(err);
         setOpError(`Kassensturz konnte nicht gelöscht werden: ${msg}`);
+      }
+    },
+
+    addShoppingItem(text: string) {
+      const item: ShoppingItem = {
+        id: crypto.randomUUID(),
+        text,
+        checked: false,
+        createdAt: new Date().toISOString(),
+      };
+      setShoppingItems(prev => [...prev, item]);
+      void supabase.from('shopping_items').insert({
+        id: item.id, text: item.text, checked: false, created_at: item.createdAt,
+      }).then(({ error: err }) => {
+        if (err) {
+          setShoppingItems(prev => prev.filter(i => i.id !== item.id));
+          setOpError(`Artikel konnte nicht gespeichert werden: ${err.message}`);
+        }
+      });
+    },
+
+    toggleShoppingItem(id: string) {
+      setShoppingItems(prev =>
+        prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i)
+      );
+      const item = shoppingItems.find(i => i.id === id);
+      if (!item) return;
+      void supabase.from('shopping_items')
+        .update({ checked: !item.checked })
+        .eq('id', id);
+    },
+
+    deleteShoppingItem(id: string) {
+      setShoppingItems(prev => prev.filter(i => i.id !== id));
+      void supabase.from('shopping_items').delete().eq('id', id);
+    },
+
+    async resetShoppingList() {
+      const ids = shoppingItems.map(i => i.id);
+      setShoppingItems([]);
+      if (ids.length > 0) {
+        const { error: err } = await supabase.from('shopping_items').delete().in('id', ids);
+        if (err) setOpError(`Liste konnte nicht zurückgesetzt werden: ${err.message}`);
       }
     },
   };

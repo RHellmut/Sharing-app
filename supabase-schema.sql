@@ -70,7 +70,23 @@ create policy "anon_insert_kassensturz" on public.kassensturz
 create policy "anon_delete_kassensturz" on public.kassensturz
   for delete to anon using (true);
 
+-- Einkaufsliste-Tabelle
+create table if not exists public.shopping_items (
+  id         uuid        primary key default gen_random_uuid(),
+  text       text        not null,
+  checked    boolean     not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.shopping_items enable row level security;
+
+create policy "anon_select_shopping"  on public.shopping_items for select to anon using (true);
+create policy "anon_insert_shopping"  on public.shopping_items for insert to anon with check (true);
+create policy "anon_update_shopping"  on public.shopping_items for update to anon using (true) with check (true);
+create policy "anon_delete_shopping"  on public.shopping_items for delete to anon using (true);
+
 -- Realtime aktivieren (Sofort-Sync zwischen den Handys)
 alter publication supabase_realtime add table public.expenses;
 alter publication supabase_realtime add table public.settings;
 alter publication supabase_realtime add table public.kassensturz;
+alter publication supabase_realtime add table public.shopping_items;

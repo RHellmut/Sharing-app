@@ -33,3 +33,10 @@ export interface Kassensturz {
   id: string;
   createdAt: string; // ISO datetime
 }
+
+export interface ShoppingItem {
+  id: string;
+  text: string;
+  checked: boolean;
+  createdAt: string;
+}

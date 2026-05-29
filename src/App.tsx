@@ -1,16 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive } from 'lucide-react';
+import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart } from 'lucide-react';
 import { useStore } from './storage';
 import { BalanceCard } from './components/BalanceCard';
 import { AddExpenseForm } from './components/AddExpenseForm';
 import { ExpenseList } from './components/ExpenseList';
 import { KassensturzPeriod } from './components/KassensturzPeriod';
+import { ShoppingList } from './components/ShoppingList';
 import { SettingsModal } from './components/SettingsModal';
 import { calculateBalance, expensesThisMonth, totalExpenses, formatCurrency } from './calculations';
 import { CATEGORIES } from './constants';
 import { Expense, PersonId } from './types';
 
-type Tab = 'overview' | 'add' | 'history';
+type Tab = 'overview' | 'add' | 'history' | 'shopping';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -33,6 +34,11 @@ export default function App() {
     updateSettings,
     performKassensturz,
     deleteKassensturz,
+    shoppingItems,
+    addShoppingItem,
+    toggleShoppingItem,
+    deleteShoppingItem,
+    resetShoppingList,
   } = useStore();
 
   const kassensturzPeriods = useMemo(() =>
@@ -331,6 +337,19 @@ export default function App() {
             )}
           </div>
         )}
+
+        {/* ── Shopping List ── */}
+        {tab === 'shopping' && (
+          <div className="h-full flex flex-col">
+            <ShoppingList
+              items={shoppingItems}
+              onAdd={addShoppingItem}
+              onToggle={toggleShoppingItem}
+              onDelete={deleteShoppingItem}
+              onReset={resetShoppingList}
+            />
+          </div>
+        )}
       </main>
 
       {/* ── Bottom Nav ── */}
@@ -341,11 +360,21 @@ export default function App() {
             tab === 'overview' ? 'text-emerald-600' : 'text-gray-400'
           }`}
         >
-          <LayoutDashboard size={22} />
-          <span className="text-xs">Übersicht</span>
+          <LayoutDashboard size={20} />
+          <span className="text-[10px]">Übersicht</span>
         </button>
 
-        <div className="flex-none flex items-center justify-center px-8">
+        <button
+          onClick={() => setTab('history')}
+          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors ${
+            tab === 'history' ? 'text-emerald-600' : 'text-gray-400'
+          }`}
+        >
+          <List size={20} />
+          <span className="text-[10px]">Verlauf</span>
+        </button>
+
+        <div className="flex-none flex items-center justify-center px-5">
           <button
             onClick={() => setTab('add')}
             className={`w-14 h-14 -mt-5 rounded-full flex items-center justify-center shadow-lg transition-all ${
@@ -357,13 +386,18 @@ export default function App() {
         </div>
 
         <button
-          onClick={() => setTab('history')}
-          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors ${
-            tab === 'history' ? 'text-emerald-600' : 'text-gray-400'
+          onClick={() => setTab('shopping')}
+          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
+            tab === 'shopping' ? 'text-emerald-600' : 'text-gray-400'
           }`}
         >
-          <List size={22} />
-          <span className="text-xs">Verlauf</span>
+          <ShoppingCart size={20} />
+          {shoppingItems.filter(i => !i.checked).length > 0 && (
+            <span className="absolute top-2 right-4 w-4 h-4 bg-emerald-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              {shoppingItems.filter(i => !i.checked).length}
+            </span>
+          )}
+          <span className="text-[10px]">Liste</span>
         </button>
       </nav>
 
