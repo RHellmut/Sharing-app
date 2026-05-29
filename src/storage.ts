@@ -33,12 +33,13 @@ export interface StoreResult {
   settings:           Settings;
   loading:            boolean;
   error:              string | null;
-  opError:            string | null;
-  clearOpError:       () => void;
-  addExpense:         (e: Expense) => void;
-  deleteExpense:      (id: string) => void;
-  updateSettings:     (s: Settings) => void;
-  performKassensturz: () => Promise<void>;
+  opError:             string | null;
+  clearOpError:        () => void;
+  addExpense:          (e: Expense) => void;
+  deleteExpense:       (id: string) => void;
+  updateSettings:      (s: Settings) => void;
+  performKassensturz:  () => Promise<void>;
+  deleteKassensturz:   (ksId: string, expenseIds: string[]) => Promise<void>;
 }
 
 export function useStore(): StoreResult {
@@ -212,16 +213,35 @@ export function useStore(): StoreResult {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
       };
-      // Optimistisch lokal setzen
       setKassensturzList(prev => [newKs, ...prev]);
       const { error: err } = await supabase.from('kassensturz').insert({
         id:         newKs.id,
         created_at: newKs.createdAt,
       });
       if (err) {
-        // Bei Fehler rückgängig machen
         setKassensturzList(prev => prev.filter(k => k.id !== newKs.id));
         throw err;
+      }
+    },
+
+    async deleteKassensturz(ksId: string, expenseIds: string[]) {
+      const prevExpenses = expenses;
+      const prevKsList   = kassensturzList;
+      // Optimistic
+      setExpenses(prev => prev.filter(e => !expenseIds.includes(e.id)));
+      setKassensturzList(prev => prev.filter(k => k.id !== ksId));
+      try {
+        if (expenseIds.length > 0) {
+          const { error: expErr } = await supabase.from('expenses').delete().in('id', expenseIds);
+          if (expErr) throw expErr;
+        }
+        const { error: ksErr } = await supabase.from('kassensturz').delete().eq('id', ksId);
+        if (ksErr) throw ksErr;
+      } catch (err: unknown) {
+        setExpenses(prevExpenses);
+        setKassensturzList(prevKsList);
+        const msg = err instanceof Error ? err.message : String(err);
+        setOpError(`Kassensturz konnte nicht gelöscht werden: ${msg}`);
       }
     },
   };
