@@ -121,7 +121,7 @@ export default function App() {
       )}
 
       {/* ── Content ── */}
-      <main className="flex-1 overflow-y-auto px-4 py-4 pb-28">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 pb-28">
 
         {/* ── Overview ── */}
         {tab === 'overview' && (
