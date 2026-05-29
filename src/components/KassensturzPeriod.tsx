@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, FileDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileDown, Trash2 } from 'lucide-react';
 import { Expense, Settings, Kassensturz } from '../types';
 import { ExpenseList } from './ExpenseList';
 import { calculateBalance, totalExpenses, formatCurrency } from '../calculations';
@@ -11,13 +11,20 @@ interface Props {
   expenses: Expense[];
   settings: Settings;
   onDelete: (id: string) => void;
+  onDeletePeriod: (ksId: string, expenseIds: string[]) => Promise<void>;
 }
 
-export function KassensturzPeriod({ kassensturz, prevCreatedAt, expenses, settings, onDelete }: Props) {
+export function KassensturzPeriod({ kassensturz, prevCreatedAt, expenses, settings, onDelete, onDeletePeriod }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const handlePDF = () => {
     generateKassensturzPDF(kassensturz, expenses, settings, prevCreatedAt);
+  };
+
+  const handleDelete = async () => {
+    await onDeletePeriod(kassensturz.id, expenses.map(e => e.id));
+    setConfirming(false);
   };
 
   const fmtDate = (iso: string) =>
@@ -54,14 +61,48 @@ export function KassensturzPeriod({ kassensturz, prevCreatedAt, expenses, settin
               </span>
             </div>
           </div>
-          <button
-            onClick={handlePDF}
-            className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
-          >
-            <FileDown size={13} />
-            PDF
-          </button>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={handlePDF}
+              className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              <FileDown size={13} />
+              PDF
+            </button>
+            <button
+              onClick={() => setConfirming(true)}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              aria-label="Kassensturz löschen"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
         </div>
+
+        {/* Delete confirmation */}
+        {confirming && (
+          <div className="mt-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
+            <p className="text-xs text-red-700 mb-2">
+              Kassensturz und alle {expenses.length} {expenses.length === 1 ? 'Eintrag' : 'Einträge'} endgültig löschen?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirming(false)}
+                className="flex-1 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                Endgültig löschen
+              </button>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={() => setExpanded(e => !e)}

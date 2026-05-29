@@ -32,6 +32,7 @@ export default function App() {
     deleteExpense,
     updateSettings,
     performKassensturz,
+    deleteKassensturz,
   } = useStore();
 
   const kassensturzPeriods = useMemo(() =>
@@ -317,6 +318,7 @@ export default function App() {
                     expenses={period.expenses}
                     settings={settings}
                     onDelete={deleteExpense}
+                    onDeletePeriod={deleteKassensturz}
                   />
                 ))}
               </div>

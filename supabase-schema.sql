@@ -67,6 +67,9 @@ create policy "anon_select_kassensturz" on public.kassensturz
 create policy "anon_insert_kassensturz" on public.kassensturz
   for insert to anon with check (true);
 
+create policy "anon_delete_kassensturz" on public.kassensturz
+  for delete to anon using (true);
+
 -- Realtime aktivieren (Sofort-Sync zwischen den Handys)
 alter publication supabase_realtime add table public.expenses;
 alter publication supabase_realtime add table public.settings;
