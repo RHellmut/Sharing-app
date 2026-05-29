@@ -1,34 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle2, ArrowRight, HandCoins, X, Palmtree, ImagePlus, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle2, ArrowRight, HandCoins, X, Palmtree } from 'lucide-react';
 import { Expense, Settings } from '../types';
 import { calculateBalance, formatCurrency } from '../calculations';
-
-const STORAGE_KEY = 'vacation_photo_v1';
-
-function compressImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX = 1200;
-        let { width, height } = img;
-        if (width > MAX || height > MAX) {
-          if (width > height) { height = (height * MAX) / width; width = MAX; }
-          else { width = (width * MAX) / height; height = MAX; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width; canvas.height = height;
-        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.82));
-      };
-      img.onerror = reject;
-      img.src = ev.target!.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 interface Props {
   expenses: Expense[];
@@ -39,36 +12,7 @@ interface Props {
 export function BalanceCard({ expenses, settings, onSettle }: Props) {
   const [confirming, setConfirming]     = useState(false);
   const [vacationOpen, setVacationOpen] = useState(false);
-  const [photo, setPhoto]               = useState<string | null>(null);
-  const [uploading, setUploading]       = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
   const balance = calculateBalance(expenses);
-
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setPhoto(saved);
-  }, []);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const compressed = await compressImage(file);
-      localStorage.setItem(STORAGE_KEY, compressed);
-      setPhoto(compressed);
-    } catch {
-      alert('Foto konnte nicht geladen werden.');
-    } finally {
-      setUploading(false);
-      e.target.value = '';
-    }
-  };
-
-  const handleRemovePhoto = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setPhoto(null);
-  };
 
   const vacationButton = (
     <button
@@ -83,67 +27,22 @@ export function BalanceCard({ expenses, settings, onSettle }: Props) {
   const overlay = vacationOpen && (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}
       onClick={() => setVacationOpen(false)}
     >
-      {/* Close button */}
       <button
         onClick={() => setVacationOpen(false)}
-        className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white transition-colors z-10"
-        style={{ marginTop: 'env(safe-area-inset-top)' }}
+        className="absolute right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white transition-colors z-10"
+        style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }}
         aria-label="Schließen"
       >
         <X size={22} />
       </button>
-
-      {photo ? (
-        /* Show photo */
-        <div className="flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
-          <img
-            src={photo}
-            alt="Vacation"
-            className="rounded-2xl shadow-2xl object-contain"
-            style={{ maxWidth: '92vw', maxHeight: '78vh' }}
-          />
-          <button
-            onClick={handleRemovePhoto}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white/15 hover:bg-red-500/70 text-white text-xs font-medium rounded-full transition-colors border border-white/20"
-          >
-            <Trash2 size={12} />
-            Foto entfernen
-          </button>
-        </div>
-      ) : (
-        /* No photo yet — upload prompt */
-        <div
-          className="flex flex-col items-center gap-4 text-white text-center px-8"
-          onClick={e => e.stopPropagation()}
-        >
-          <div className="w-20 h-20 rounded-full bg-white/15 flex items-center justify-center">
-            <Palmtree size={36} className="opacity-70" />
-          </div>
-          <div>
-            <p className="text-lg font-semibold mb-1">Vacation Mode</p>
-            <p className="text-sm text-white/70">Füge euer gemeinsames Foto hinzu</p>
-          </div>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-2 px-6 py-3 bg-white text-gray-800 font-semibold rounded-xl shadow-lg hover:bg-gray-100 transition-colors disabled:opacity-60"
-          >
-            <ImagePlus size={18} />
-            {uploading ? 'Wird geladen…' : 'Foto auswählen'}
-          </button>
-          <p className="text-xs text-white/50">Das Foto wird nur auf diesem Gerät gespeichert</p>
-        </div>
-      )}
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-        className="hidden"
+      <img
+        src="/vacation.jpg"
+        alt="Vacation"
+        className="rounded-2xl shadow-2xl object-contain"
+        style={{ maxWidth: '92vw', maxHeight: '88vh' }}
+        onClick={e => e.stopPropagation()}
       />
     </div>
   );
