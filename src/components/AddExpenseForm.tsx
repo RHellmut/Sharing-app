@@ -49,6 +49,17 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
   const [imgLoading, setImgLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const dateRef = useRef<HTMLInputElement>(null);
+
+  const openDatePicker = () => {
+    const el = dateRef.current;
+    if (!el) return;
+    if (typeof (el as HTMLInputElement & { showPicker?: () => void }).showPicker === 'function') {
+      (el as HTMLInputElement & { showPicker: () => void }).showPicker();
+    } else {
+      el.focus();
+    }
+  };
 
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -234,19 +245,22 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
       </div>
 
       {/* Date */}
-      <div className="w-full">
+      <div>
         <label className="text-sm font-medium text-gray-600 block mb-1.5">Datum</label>
-        <div className="relative w-full overflow-hidden">
-          <div className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-gray-700 text-base">
-            {new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </div>
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="absolute inset-0 opacity-0 cursor-pointer"
-          />
-        </div>
+        <button
+          type="button"
+          onClick={openDatePicker}
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-gray-700 text-base text-left"
+        >
+          {new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
+        </button>
+        <input
+          ref={dateRef}
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          style={{ position: 'fixed', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+        />
       </div>
 
       {/* Receipt */}
