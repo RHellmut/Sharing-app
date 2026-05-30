@@ -47,3 +47,10 @@ export interface FixkostenAmounts {
   person1Amount: number;
   person2Amount: number;
 }
+
+export interface VertragsEntry {
+  key: string;
+  anbieter: string;
+  vertragsbeginn: string | null;
+  vertragsende: string | null;
+}

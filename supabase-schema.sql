@@ -106,9 +106,27 @@ create policy "anon_select_fixkosten" on public.fixkosten for select to anon usi
 create policy "anon_insert_fixkosten" on public.fixkosten for insert to anon with check (true);
 create policy "anon_update_fixkosten" on public.fixkosten for update to anon using (true) with check (true);
 
+-- Verträge-Tabelle (Vertragsdaten für Strom und Internet)
+create table if not exists public.vertraege (
+  key            text  primary key,   -- 'strom' | 'internet'
+  anbieter       text  not null default '',
+  vertragsbeginn date,
+  vertragsende   date
+);
+
+insert into public.vertraege (key) values ('strom'), ('internet')
+on conflict (key) do nothing;
+
+alter table public.vertraege enable row level security;
+
+create policy "anon_select_vertraege" on public.vertraege for select to anon using (true);
+create policy "anon_insert_vertraege" on public.vertraege for insert to anon with check (true);
+create policy "anon_update_vertraege" on public.vertraege for update to anon using (true) with check (true);
+
 -- Realtime aktivieren (Sofort-Sync zwischen den Handys)
 alter publication supabase_realtime add table public.expenses;
 alter publication supabase_realtime add table public.settings;
 alter publication supabase_realtime add table public.kassensturz;
 alter publication supabase_realtime add table public.shopping_items;
 alter publication supabase_realtime add table public.fixkosten;
+alter publication supabase_realtime add table public.vertraege;

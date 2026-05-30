@@ -41,6 +41,8 @@ export default function App() {
     resetShoppingList,
     fixkosten,
     updateFixkosten,
+    vertraege,
+    updateVertrag,
   } = useStore();
 
   const kassensturzPeriods = useMemo(() =>
@@ -296,8 +298,10 @@ export default function App() {
         {tab === 'fixkosten' && (
           <FixkostenTab
             fixkosten={fixkosten}
+            vertraege={vertraege}
             settings={settings}
             onUpdate={updateFixkosten}
+            onUpdateVertrag={updateVertrag}
           />
         )}
       </main>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Expense, Settings, Kassensturz, ShoppingItem, FixkostenAmounts } from './types';
+import { Expense, Settings, Kassensturz, ShoppingItem, FixkostenAmounts, VertragsEntry } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 import { supabase } from './supabaseClient';
 
@@ -41,6 +41,7 @@ export interface StoreResult {
   kassensturzList:      Kassensturz[];
   shoppingItems:        ShoppingItem[];
   fixkosten:            Record<string, FixkostenAmounts>;
+  vertraege:            Record<string, VertragsEntry>;
   settings:             Settings;
   loading:              boolean;
   error:                string | null;
@@ -56,6 +57,7 @@ export interface StoreResult {
   deleteShoppingItem:   (id: string) => void;
   resetShoppingList:    () => Promise<void>;
   updateFixkosten:      (key: string, person: 'person1' | 'person2', amount: number) => void;
+  updateVertrag:        (key: string, field: 'anbieter' | 'vertragsbeginn' | 'vertragsende', value: string) => void;
 }
 
 export function useStore(): StoreResult {
@@ -63,6 +65,7 @@ export function useStore(): StoreResult {
   const [kassensturzList, setKassensturzList] = useState<Kassensturz[]>([]);
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [fixkosten, setFixkosten] = useState<Record<string, FixkostenAmounts>>({});
+  const [vertraege, setVertraege] = useState<Record<string, VertragsEntry>>({});
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,8 +138,24 @@ export function useStore(): StoreResult {
       setFixkosten(map);
     };
 
+    const fetchVertraege = async () => {
+      const { data } = await supabase.from('vertraege').select('*');
+      if (!mounted) return;
+      const map: Record<string, VertragsEntry> = {};
+      for (const row of data ?? []) {
+        map[row.key as string] = {
+          key:             row.key as string,
+          anbieter:        (row.anbieter as string) ?? '',
+          vertragsbeginn:  (row.vertragsbeginn as string | null) ?? null,
+          vertragsende:    (row.vertragsende  as string | null) ?? null,
+        };
+      }
+      setVertraege(map);
+    };
+
     void Promise.all([
-      fetchExpenses(), fetchSettings(), fetchKassensturz(), fetchShoppingItems(), fetchFixkosten(),
+      fetchExpenses(), fetchSettings(), fetchKassensturz(), fetchShoppingItems(),
+      fetchFixkosten(), fetchVertraege(),
     ]).finally(() => { if (mounted) setLoading(false); });
 
     const channel = supabase
@@ -146,6 +165,7 @@ export function useStore(): StoreResult {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'kassensturz' }, fetchKassensturz)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items' }, fetchShoppingItems)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fixkosten' }, fetchFixkosten)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vertraege' }, fetchVertraege)
       .subscribe();
 
     const poll = setInterval(() => {
@@ -168,6 +188,7 @@ export function useStore(): StoreResult {
     kassensturzList,
     shoppingItems,
     fixkosten,
+    vertraege,
     settings,
     loading,
     error,
@@ -317,6 +338,31 @@ export function useStore(): StoreResult {
         const { error: err } = await supabase.from('shopping_items').delete().in('id', ids);
         if (err) setOpError(`Liste konnte nicht zurückgesetzt werden: ${err.message}`);
       }
+    },
+
+    updateVertrag(key: string, field: 'anbieter' | 'vertragsbeginn' | 'vertragsende', value: string) {
+      const snapshot = vertraege;
+      const current = vertraege[key] ?? { key, anbieter: '', vertragsbeginn: null, vertragsende: null };
+      const updated: VertragsEntry = { ...current, [field]: value || null };
+      setVertraege(prev => ({ ...prev, [key]: updated }));
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('vertraege').upsert({
+            key,
+            anbieter:       updated.anbieter,
+            vertragsbeginn: updated.vertragsbeginn ?? null,
+            vertragsende:   updated.vertragsende   ?? null,
+          });
+          if (err) {
+            setVertraege(snapshot);
+            setOpError(`Vertrag konnte nicht gespeichert werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setVertraege(snapshot);
+          setOpError(`Netzwerkfehler beim Speichern des Vertrags. (${msg})`);
+        }
+      })();
     },
 
     updateFixkosten(key: string, person: 'person1' | 'person2', amount: number) {
