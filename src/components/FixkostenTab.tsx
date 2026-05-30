@@ -31,10 +31,18 @@ function toDraft(fixkosten: Record<string, FixkostenAmounts>): Draft {
   ) as Draft;
 }
 
+const fmt = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function formatDisplay(raw: string): string {
+  const num = parseFloat(raw.replace(',', '.'));
+  if (!raw || isNaN(num)) return '';
+  return fmt.format(num) + ' €';
+}
+
 export function FixkostenTab({ fixkosten, settings, onUpdate }: Props) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(fixkosten));
+  const [focused, setFocused] = useState<string | null>(null);
 
-  // Sync when remote data arrives (e.g. other person saves)
   useEffect(() => {
     setDraft(toDraft(fixkosten));
   }, [fixkosten]);
@@ -43,11 +51,11 @@ export function FixkostenTab({ fixkosten, settings, onUpdate }: Props) {
     Math.round((parseFloat(raw.replace(',', '.')) || 0) * 100) / 100;
 
   const handleBlur = (key: DraftKey, p: 'p1' | 'p2') => {
+    setFocused(null);
     const amount = parseAmount(draft[key][p]);
     onUpdate(key, p === 'p1' ? 'person1' : 'person2', amount);
   };
 
-  // Computed totals from draft (live while typing)
   const rows = ITEMS.map(({ key }) => {
     const p1 = parseAmount(draft[key].p1);
     const p2 = parseAmount(draft[key].p2);
@@ -58,7 +66,6 @@ export function FixkostenTab({ fixkosten, settings, onUpdate }: Props) {
   const totalP2 = rows.reduce((s, r) => s + r.p2, 0);
   const grand   = totalP1 + totalP2;
   const fair    = grand / 2;
-  // positive → person1 overpays → person2 owes person1
   const balance = Math.round((totalP1 - fair) * 100) / 100;
 
   return (
@@ -84,33 +91,36 @@ export function FixkostenTab({ fixkosten, settings, onUpdate }: Props) {
 
             {/* Inputs */}
             <div className="grid grid-cols-2 divide-x divide-gray-100">
-              {(['p1', 'p2'] as const).map((p, idx) => (
-                <div key={p} className="px-3 py-3">
-                  <p className="text-xs text-gray-400 mb-1.5">
-                    {idx === 0 ? settings.person1Name : settings.person2Name}
-                  </p>
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">
-                      €
-                    </span>
+              {(['p1', 'p2'] as const).map((p, idx) => {
+                const fieldId = `${key}-${p}`;
+                const isFocused = focused === fieldId;
+                return (
+                  <div key={p} className="px-3 py-3">
+                    <p className="text-xs text-gray-400 mb-1.5">
+                      {idx === 0 ? settings.person1Name : settings.person2Name}
+                    </p>
                     <input
                       type="text"
                       inputMode="decimal"
-                      value={draft[key][p]}
+                      value={isFocused ? draft[key][p] : formatDisplay(draft[key][p])}
+                      placeholder="0,00 €"
                       onChange={e =>
                         setDraft(prev => ({
                           ...prev,
                           [key]: { ...prev[key], [p]: e.target.value },
                         }))
                       }
-                      onFocus={e => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                      onFocus={e => {
+                        setFocused(fieldId);
+                        e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => e.currentTarget.select(), 0);
+                      }}
                       onBlur={() => handleBlur(key, p)}
-                      placeholder="0,00"
-                      className="w-full border border-gray-200 rounded-lg pl-7 pr-2 py-2 text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );
