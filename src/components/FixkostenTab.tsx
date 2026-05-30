@@ -105,6 +105,7 @@ export function FixkostenTab({ fixkosten, settings, onUpdate }: Props) {
                           [key]: { ...prev[key], [p]: e.target.value },
                         }))
                       }
+                      onFocus={e => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                       onBlur={() => handleBlur(key, p)}
                       placeholder="0,00"
                       className="w-full border border-gray-200 rounded-lg pl-7 pr-2 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
@@ -146,11 +147,11 @@ export function FixkostenTab({ fixkosten, settings, onUpdate }: Props) {
               <span className="font-semibold">
                 {balance > 0 ? settings.person2Name : settings.person1Name}
               </span>
-              {' schuldet '}
+              {' soll '}
               <span className="font-semibold">
                 {balance > 0 ? settings.person1Name : settings.person2Name}
               </span>
-              {' monatlich '}
+              {' monatlich überweisen: '}
               <span className="font-semibold text-amber-300">
                 {formatCurrency(Math.abs(balance))}
               </span>
