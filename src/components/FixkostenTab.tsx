@@ -108,7 +108,7 @@ export function FixkostenTab({ fixkosten, settings, onUpdate }: Props) {
                       onFocus={e => e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                       onBlur={() => handleBlur(key, p)}
                       placeholder="0,00"
-                      className="w-full border border-gray-200 rounded-lg pl-7 pr-2 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      className="w-full border border-gray-200 rounded-lg pl-7 pr-2 py-2 text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     />
                   </div>
                 </div>
