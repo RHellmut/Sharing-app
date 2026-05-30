@@ -36,6 +36,12 @@ export interface Kassensturz {
   createdAt: string; // ISO datetime
 }
 
+export interface KassensturzPeriodData {
+  kassensturz: Kassensturz;
+  prevCreatedAt: string | null;
+  expenses: Expense[];
+}
+
 export interface ShoppingItem {
   id: string;
   text: string;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Expense, Settings, Kassensturz, ShoppingItem, FixkostenAmounts, VertragsEntry } from './types';
+import { Expense, Settings, Kassensturz, KassensturzPeriodData, ShoppingItem, FixkostenAmounts, VertragsEntry } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 import { supabase } from './supabaseClient';
 
@@ -39,6 +39,7 @@ export interface StoreResult {
   activeExpenses:       Expense[];
   archivedExpenses:     Expense[];
   kassensturzList:      Kassensturz[];
+  kassensturzPeriods:   KassensturzPeriodData[];
   shoppingItems:        ShoppingItem[];
   fixkosten:            Record<string, FixkostenAmounts>;
   vertraege:            Record<string, VertragsEntry>;
@@ -85,6 +86,21 @@ export function useStore(): StoreResult {
     if (!last) return [];
     return expenses.filter(e => e.createdAt <= last.createdAt);
   }, [expenses, kassensturzList]);
+
+  const kassensturzPeriods = useMemo(() =>
+    kassensturzList.map((ks, index) => {
+      const prevKs = kassensturzList[index + 1];
+      return {
+        kassensturz: ks,
+        prevCreatedAt: prevKs?.createdAt ?? null,
+        expenses: expenses.filter(e =>
+          e.createdAt <= ks.createdAt &&
+          (!prevKs || e.createdAt > prevKs.createdAt)
+        ),
+      };
+    }),
+    [expenses, kassensturzList],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -199,6 +215,7 @@ export function useStore(): StoreResult {
     activeExpenses,
     archivedExpenses,
     kassensturzList,
+    kassensturzPeriods,
     shoppingItems,
     fixkosten,
     vertraege,

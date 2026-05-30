@@ -1,4 +1,4 @@
-import React, { useState, useMemo, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart, Landmark, Globe } from 'lucide-react';
 import { useStore } from './storage';
 import { BalanceCard } from './components/BalanceCard';
@@ -29,6 +29,7 @@ export default function App() {
     activeExpenses,
     archivedExpenses,
     kassensturzList,
+    kassensturzPeriods,
     settings,
     loading,
     error,
@@ -51,21 +52,6 @@ export default function App() {
     visitedCountries,
     toggleVisitedCountry,
   } = useStore();
-
-  const kassensturzPeriods = useMemo(() =>
-    kassensturzList.map((ks, index) => {
-      const prevKs = kassensturzList[index + 1];
-      return {
-        kassensturz: ks,
-        prevCreatedAt: prevKs?.createdAt ?? null,
-        expenses: expenses.filter(e =>
-          e.createdAt <= ks.createdAt &&
-          (!prevKs || e.createdAt > prevKs.createdAt)
-        ),
-      };
-    }),
-    [expenses, kassensturzList],
-  );
 
   const thisMonth = expensesThisMonth(activeExpenses);
   const recent = activeExpenses.filter(e => e.categoryId !== 'ausgleich').slice(0, 4);
