@@ -50,7 +50,7 @@ export function BalanceCard({ expenses, settings, onKassensturz }: Props) {
   if (balance.amount < 0.005) {
     return (
       <>
-        <div className="relative bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
+        <div className="relative bg-gradient-to-br from-green-800 to-green-950 rounded-2xl p-6 text-white shadow-lg">
           {vacationButton}
           <div className="flex flex-col items-center gap-2 py-2 mb-4">
             <CheckCircle2 size={48} className="opacity-90" />
@@ -75,7 +75,7 @@ export function BalanceCard({ expenses, settings, onKassensturz }: Props) {
 
   return (
     <>
-      <div className="relative bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
+      <div className="relative bg-gradient-to-br from-green-800 to-green-950 rounded-2xl p-6 text-white shadow-lg">
         {vacationButton}
         <p className="text-slate-300 text-sm font-medium mb-1">Offener Saldo</p>
         <div className="text-4xl font-bold mb-4">{formatCurrency(balance.amount)}</div>
