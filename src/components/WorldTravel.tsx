@@ -56,6 +56,7 @@ interface Props {
 
 export function WorldTravel({ visited, onToggle, onBack }: Props) {
   const [search, setSearch] = useState('');
+  const [zoom, setZoom] = useState(1);
 
   const { visitedList, openList } = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -98,7 +99,7 @@ export function WorldTravel({ visited, onToggle, onBack }: Props) {
             height={320}
             style={{ width: '100%', height: 'auto' }}
           >
-            <ZoomableGroup center={[10, 30]} zoom={1} minZoom={1} maxZoom={8}>
+            <ZoomableGroup center={[10, 30]} zoom={1} minZoom={1} maxZoom={40} onMoveEnd={({ zoom: z }) => setZoom(z)}>
               <Geographies geography={worldData}>
                 {({ geographies, projection }) => (
                   <>
@@ -114,13 +115,13 @@ export function WorldTravel({ visited, onToggle, onBack }: Props) {
                             default: {
                               fill: isVisited ? '#0ea5e9' : '#e2e8f0',
                               stroke: '#ffffff',
-                              strokeWidth: 0.4,
+                              strokeWidth: 0.4 / zoom,
                               outline: 'none',
                             },
                             hover: {
                               fill: isVisited ? '#0284c7' : '#cbd5e1',
                               stroke: '#ffffff',
-                              strokeWidth: 0.4,
+                              strokeWidth: 0.4 / zoom,
                               outline: 'none',
                               cursor: 'pointer',
                             },
@@ -142,7 +143,7 @@ export function WorldTravel({ visited, onToggle, onBack }: Props) {
                           key={`lbl-${geo.rsmKey}`}
                           x={pos[0]}
                           y={pos[1]}
-                          fontSize={2}
+                          fontSize={1.8 / zoom}
                           textAnchor="middle"
                           dominantBaseline="central"
                           fill="#1e293b"
