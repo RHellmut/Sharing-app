@@ -42,6 +42,7 @@ export interface StoreResult {
   shoppingItems:        ShoppingItem[];
   fixkosten:            Record<string, FixkostenAmounts>;
   vertraege:            Record<string, VertragsEntry>;
+  visitedCountries:     Set<string>;
   settings:             Settings;
   loading:              boolean;
   error:                string | null;
@@ -58,6 +59,7 @@ export interface StoreResult {
   resetShoppingList:    () => Promise<void>;
   updateFixkosten:      (key: string, person: 'person1' | 'person2', amount: number) => void;
   updateVertrag:        (key: string, field: string, value: string | boolean) => void;
+  toggleVisitedCountry: (code: string) => void;
 }
 
 export function useStore(): StoreResult {
@@ -66,6 +68,7 @@ export function useStore(): StoreResult {
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [fixkosten, setFixkosten] = useState<Record<string, FixkostenAmounts>>({});
   const [vertraege, setVertraege] = useState<Record<string, VertragsEntry>>({});
+  const [visitedCountries, setVisitedCountries] = useState<Set<string>>(new Set());
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,9 +159,15 @@ export function useStore(): StoreResult {
       setVertraege(map);
     };
 
+    const fetchVisitedCountries = async () => {
+      const { data } = await supabase.from('visited_countries').select('country_code');
+      if (!mounted) return;
+      setVisitedCountries(new Set((data ?? []).map(r => r.country_code as string)));
+    };
+
     void Promise.all([
       fetchExpenses(), fetchSettings(), fetchKassensturz(), fetchShoppingItems(),
-      fetchFixkosten(), fetchVertraege(),
+      fetchFixkosten(), fetchVertraege(), fetchVisitedCountries(),
     ]).finally(() => { if (mounted) setLoading(false); });
 
     const channel = supabase
@@ -169,6 +178,7 @@ export function useStore(): StoreResult {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items' }, fetchShoppingItems)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fixkosten' }, fetchFixkosten)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vertraege' }, fetchVertraege)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'visited_countries' }, fetchVisitedCountries)
       .subscribe();
 
     const poll = setInterval(() => {
@@ -192,6 +202,7 @@ export function useStore(): StoreResult {
     shoppingItems,
     fixkosten,
     vertraege,
+    visitedCountries,
     settings,
     loading,
     error,
@@ -341,6 +352,31 @@ export function useStore(): StoreResult {
         const { error: err } = await supabase.from('shopping_items').delete().in('id', ids);
         if (err) setOpError(`Liste konnte nicht zurückgesetzt werden: ${err.message}`);
       }
+    },
+
+    toggleVisitedCountry(code: string) {
+      const wasVisited = visitedCountries.has(code);
+      const snapshot = visitedCountries;
+      setVisitedCountries(prev => {
+        const next = new Set(prev);
+        if (wasVisited) next.delete(code); else next.add(code);
+        return next;
+      });
+      void (async () => {
+        try {
+          if (wasVisited) {
+            const { error: err } = await supabase.from('visited_countries').delete().eq('country_code', code);
+            if (err) { setVisitedCountries(snapshot); setOpError(`Land konnte nicht entfernt werden: ${err.message}`); }
+          } else {
+            const { error: err } = await supabase.from('visited_countries').insert({ country_code: code });
+            if (err) { setVisitedCountries(snapshot); setOpError(`Land konnte nicht gespeichert werden: ${err.message}`); }
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setVisitedCountries(snapshot);
+          setOpError(`Netzwerkfehler bei der Reiseliste. (${msg})`);
+        }
+      })();
     },
 
     updateVertrag(key: string, field: string, value: string | boolean) {

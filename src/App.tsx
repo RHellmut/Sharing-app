@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart, Landmark } from 'lucide-react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
+import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart, Landmark, Globe } from 'lucide-react';
 import { useStore } from './storage';
 import { BalanceCard } from './components/BalanceCard';
 import { AddExpenseForm } from './components/AddExpenseForm';
@@ -8,6 +8,10 @@ import { KassensturzPeriod } from './components/KassensturzPeriod';
 import { ShoppingList } from './components/ShoppingList';
 import { FixkostenTab } from './components/FixkostenTab';
 import { SettingsModal } from './components/SettingsModal';
+
+const WorldTravel = lazy(() =>
+  import('./components/WorldTravel').then(m => ({ default: m.WorldTravel }))
+);
 import { expensesThisMonth, totalExpenses, formatCurrency } from './calculations';
 import { CATEGORIES } from './constants';
 import { CategoryIcon } from './components/CategoryIcon';
@@ -18,6 +22,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
   const [showSettings, setShowSettings] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [showWorldTravel, setShowWorldTravel] = useState(false);
 
   const {
     expenses,
@@ -43,6 +48,8 @@ export default function App() {
     updateFixkosten,
     vertraege,
     updateVertrag,
+    visitedCountries,
+    toggleVisitedCountry,
   } = useStore();
 
   const kassensturzPeriods = useMemo(() =>
@@ -91,19 +98,42 @@ export default function App() {
     );
   }
 
+  if (showWorldTravel) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <WorldTravel
+          visited={visitedCountries}
+          onToggle={toggleVisitedCountry}
+          onBack={() => setShowWorldTravel(false)}
+        />
+      </Suspense>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto relative">
 
       {/* ── Header ── */}
-      <header className="bg-white border-b border-gray-100 px-4 pb-4 flex items-center justify-between sticky top-0 z-40"
+      <header className="bg-white border-b border-gray-100 px-4 pb-4 flex items-center gap-2 sticky top-0 z-40"
               style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}>
-        <div>
+        <div className="flex-shrink-0">
           <h1 className="text-lg font-bold text-gray-800">Catriver Cost</h1>
           <p className="text-xs text-gray-400">{settings.person1Name} &amp; {settings.person2Name}</p>
         </div>
         <button
+          onClick={() => setShowWorldTravel(true)}
+          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 bg-gradient-to-r from-sky-500 to-cyan-500 text-white rounded-full py-2 px-3 shadow-sm hover:from-sky-600 hover:to-cyan-600 transition-colors"
+        >
+          <Globe size={15} className="flex-shrink-0" />
+          <span className="text-xs font-semibold truncate">Lisl&apos;s World Travel</span>
+        </button>
+        <button
           onClick={() => setShowSettings(true)}
-          className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+          className="p-2 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0"
           aria-label="Einstellungen"
         >
           <SettingsIcon size={20} className="text-gray-500" />

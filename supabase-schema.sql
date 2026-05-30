@@ -126,6 +126,17 @@ create policy "anon_select_vertraege" on public.vertraege for select to anon usi
 create policy "anon_insert_vertraege" on public.vertraege for insert to anon with check (true);
 create policy "anon_update_vertraege" on public.vertraege for update to anon using (true) with check (true);
 
+-- Bereiste Länder-Tabelle (Lisl's World Travel)
+create table if not exists public.visited_countries (
+  country_code text primary key   -- ISO-3166 numeric (z.B. '276') oder Spezial-Code (z.B. 'x-kosovo')
+);
+
+alter table public.visited_countries enable row level security;
+
+create policy "anon_select_visited" on public.visited_countries for select to anon using (true);
+create policy "anon_insert_visited" on public.visited_countries for insert to anon with check (true);
+create policy "anon_delete_visited" on public.visited_countries for delete to anon using (true);
+
 -- Realtime aktivieren (Sofort-Sync zwischen den Handys)
 alter publication supabase_realtime add table public.expenses;
 alter publication supabase_realtime add table public.settings;
@@ -133,3 +144,4 @@ alter publication supabase_realtime add table public.kassensturz;
 alter publication supabase_realtime add table public.shopping_items;
 alter publication supabase_realtime add table public.fixkosten;
 alter publication supabase_realtime add table public.vertraege;
+alter publication supabase_realtime add table public.visited_countries;
