@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { Camera, X } from 'lucide-react';
 import { Expense, PersonId, CategoryId, Settings } from '../types';
 import { USER_CATEGORIES } from '../constants';
@@ -50,17 +49,6 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
   const [imgLoading, setImgLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
-  const dateRef = useRef<HTMLInputElement>(null);
-
-  const openDatePicker = () => {
-    const el = dateRef.current;
-    if (!el) return;
-    if (typeof (el as HTMLInputElement & { showPicker?: () => void }).showPicker === 'function') {
-      (el as HTMLInputElement & { showPicker: () => void }).showPicker();
-    } else {
-      el.focus();
-    }
-  };
 
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -248,28 +236,18 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
       {/* Date */}
       <div>
         <label className="text-sm font-medium text-gray-600 block mb-1.5">Datum</label>
-        <div
-          onClick={openDatePicker}
-          role="button"
-          tabIndex={0}
-          onKeyDown={e => e.key === 'Enter' && openDatePicker()}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 cursor-pointer bg-white text-gray-800 text-base"
-        >
-          {new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
+        <div className="relative">
+          <div className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white text-gray-800 text-base select-none pointer-events-none">
+            {new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </div>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
         </div>
       </div>
-
-      {createPortal(
-        <input
-          ref={dateRef}
-          type="date"
-          tabIndex={-1}
-          value={date}
-          onChange={e => setDate(e.target.value)}
-          style={{ position: 'fixed', top: '-100vh', left: '-100vw', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }}
-        />,
-        document.body
-      )}
 
       {/* Receipt */}
       <div>
