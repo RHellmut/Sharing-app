@@ -3,15 +3,18 @@ import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simp
 import { ArrowLeft, Search, Check } from 'lucide-react';
 import countries from 'i18n-iso-countries';
 import deLocale from 'i18n-iso-countries/langs/de.json';
-import worldData from 'world-atlas/countries-110m.json';
+import { geoCentroid } from 'd3-geo';
+import worldData from 'world-atlas/countries-50m.json';
 
 countries.registerLocale(deLocale);
 
 // Geometries without an ISO numeric id — map their English name to a stable code + German label.
 const SPECIAL: Record<string, { code: string; name: string }> = {
-  'N. Cyprus':  { code: 'x-ncyprus',    name: 'Nordzypern' },
-  'Somaliland': { code: 'x-somaliland', name: 'Somaliland' },
-  'Kosovo':     { code: 'x-kosovo',     name: 'Kosovo' },
+  'N. Cyprus':         { code: 'x-ncyprus',    name: 'Nordzypern' },
+  'Somaliland':        { code: 'x-somaliland', name: 'Somaliland' },
+  'Kosovo':            { code: 'x-kosovo',     name: 'Kosovo' },
+  'Indian Ocean Ter.': { code: 'x-biot',       name: 'Brit. Ind. Oz.' },
+  'Siachen Glacier':   { code: 'x-siachen',    name: 'Siachen' },
 };
 
 interface GeoLike {
@@ -97,38 +100,60 @@ export function WorldTravel({ visited, onToggle, onBack }: Props) {
           >
             <ZoomableGroup center={[10, 30]} zoom={1} minZoom={1} maxZoom={8}>
               <Geographies geography={worldData}>
-                {({ geographies }) =>
-                  geographies.map(geo => {
-                    const { code } = resolve(geo);
-                    const isVisited = visited.has(code);
-                    return (
-                      <Geography
-                        key={geo.rsmKey}
-                        geography={geo}
-                        onClick={() => onToggle(code)}
-                        style={{
-                          default: {
-                            fill: isVisited ? '#0ea5e9' : '#e2e8f0',
-                            stroke: '#ffffff',
-                            strokeWidth: 0.4,
-                            outline: 'none',
-                          },
-                          hover: {
-                            fill: isVisited ? '#0284c7' : '#cbd5e1',
-                            stroke: '#ffffff',
-                            strokeWidth: 0.4,
-                            outline: 'none',
-                            cursor: 'pointer',
-                          },
-                          pressed: {
-                            fill: '#0369a1',
-                            outline: 'none',
-                          },
-                        }}
-                      />
-                    );
-                  })
-                }
+                {({ geographies, projection }) => (
+                  <>
+                    {geographies.map(geo => {
+                      const { code } = resolve(geo);
+                      const isVisited = visited.has(code);
+                      return (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          onClick={() => onToggle(code)}
+                          style={{
+                            default: {
+                              fill: isVisited ? '#0ea5e9' : '#e2e8f0',
+                              stroke: '#ffffff',
+                              strokeWidth: 0.4,
+                              outline: 'none',
+                            },
+                            hover: {
+                              fill: isVisited ? '#0284c7' : '#cbd5e1',
+                              stroke: '#ffffff',
+                              strokeWidth: 0.4,
+                              outline: 'none',
+                              cursor: 'pointer',
+                            },
+                            pressed: {
+                              fill: '#0369a1',
+                              outline: 'none',
+                            },
+                          }}
+                        />
+                      );
+                    })}
+                    {geographies.map(geo => {
+                      const centroid = geoCentroid(geo);
+                      const pos = projection(centroid);
+                      if (!pos) return null;
+                      const { name } = resolve(geo);
+                      return (
+                        <text
+                          key={`lbl-${geo.rsmKey}`}
+                          x={pos[0]}
+                          y={pos[1]}
+                          fontSize={2}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fill="#1e293b"
+                          style={{ pointerEvents: 'none', userSelect: 'none' }}
+                        >
+                          {name}
+                        </text>
+                      );
+                    })}
+                  </>
+                )}
               </Geographies>
             </ZoomableGroup>
           </ComposableMap>
