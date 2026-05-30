@@ -1,4 +1,4 @@
-const CACHE = 'catriver-cost-v1';
+const CACHE = 'catriver-cost-v2';
 
 // Cache the app shell on install
 self.addEventListener('install', event => {
@@ -26,12 +26,17 @@ self.addEventListener('fetch', event => {
   // Always fetch Supabase calls live — never cache them
   if (url.hostname.includes('supabase')) return;
 
-  // Navigation requests: network first, fall back to cached root
+  // Navigation requests: network first, fall back to cached root.
+  // On success, refresh the cached shell so installed PWAs stay current.
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match('/').then(r => r ?? Response.error())
-      )
+      fetch(event.request)
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE).then(cache => cache.put('/', clone));
+          return response;
+        })
+        .catch(() => caches.match('/').then(r => r ?? Response.error()))
     );
     return;
   }
