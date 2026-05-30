@@ -257,10 +257,23 @@ export function useStore(): StoreResult {
     },
 
     updateSettings(s: Settings) {
+      const snapshot = settings;
       setSettings(s);
-      void supabase.from('settings')
-        .update({ person1_name: s.person1Name, person2_name: s.person2Name })
-        .eq('id', 1);
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('settings')
+            .update({ person1_name: s.person1Name, person2_name: s.person2Name })
+            .eq('id', 1);
+          if (err) {
+            setSettings(snapshot);
+            setOpError(`Einstellungen konnten nicht gespeichert werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setSettings(snapshot);
+          setOpError(`Netzwerkfehler beim Speichern der Einstellungen. (${msg})`);
+        }
+      })();
     },
 
     async performKassensturz() {
@@ -305,26 +318,47 @@ export function useStore(): StoreResult {
         checked: false,
         createdAt: new Date().toISOString(),
       };
+      const snapshot = shoppingItems;
       setShoppingItems(prev => [...prev, item]);
-      void supabase.from('shopping_items').insert({
-        id: item.id, text: item.text, checked: false, created_at: item.createdAt,
-      }).then(({ error: err }) => {
-        if (err) {
-          setShoppingItems(prev => prev.filter(i => i.id !== item.id));
-          setOpError(`Artikel konnte nicht gespeichert werden: ${err.message}`);
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('shopping_items').insert({
+            id: item.id, text: item.text, checked: false, created_at: item.createdAt,
+          });
+          if (err) {
+            setShoppingItems(snapshot);
+            setOpError(`Artikel konnte nicht gespeichert werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setShoppingItems(snapshot);
+          setOpError(`Netzwerkfehler beim Speichern. (${msg})`);
         }
-      });
+      })();
     },
 
     toggleShoppingItem(id: string) {
+      const item = shoppingItems.find(i => i.id === id);
+      if (!item) return;
+      const snapshot = shoppingItems;
       setShoppingItems(prev =>
         prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i)
       );
-      const item = shoppingItems.find(i => i.id === id);
-      if (!item) return;
-      void supabase.from('shopping_items')
-        .update({ checked: !item.checked })
-        .eq('id', id);
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('shopping_items')
+            .update({ checked: !item.checked })
+            .eq('id', id);
+          if (err) {
+            setShoppingItems(snapshot);
+            setOpError(`Artikel konnte nicht aktualisiert werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setShoppingItems(snapshot);
+          setOpError(`Netzwerkfehler beim Aktualisieren. (${msg})`);
+        }
+      })();
     },
 
     deleteShoppingItem(id: string) {
