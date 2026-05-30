@@ -42,3 +42,8 @@ export interface ShoppingItem {
   checked: boolean;
   createdAt: string;
 }
+
+export interface FixkostenAmounts {
+  person1Amount: number;
+  person2Amount: number;
+}

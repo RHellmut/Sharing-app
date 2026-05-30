@@ -85,8 +85,30 @@ create policy "anon_insert_shopping"  on public.shopping_items for insert to ano
 create policy "anon_update_shopping"  on public.shopping_items for update to anon using (true) with check (true);
 create policy "anon_delete_shopping"  on public.shopping_items for delete to anon using (true);
 
+-- Fixkosten-Tabelle (monatliche Fixkosten, eine Zeile pro Kategorie)
+create table if not exists public.fixkosten (
+  key            text          primary key,   -- 'miete' | 'gez' | 'strom' | 'internet'
+  person1_amount numeric(10,2) not null default 0,
+  person2_amount numeric(10,2) not null default 0
+);
+
+-- Standardwerte einfügen
+insert into public.fixkosten (key, person1_amount, person2_amount) values
+  ('miete',    0, 0),
+  ('gez',      0, 0),
+  ('strom',    0, 0),
+  ('internet', 0, 0)
+on conflict (key) do nothing;
+
+alter table public.fixkosten enable row level security;
+
+create policy "anon_select_fixkosten" on public.fixkosten for select to anon using (true);
+create policy "anon_insert_fixkosten" on public.fixkosten for insert to anon with check (true);
+create policy "anon_update_fixkosten" on public.fixkosten for update to anon using (true) with check (true);
+
 -- Realtime aktivieren (Sofort-Sync zwischen den Handys)
 alter publication supabase_realtime add table public.expenses;
 alter publication supabase_realtime add table public.settings;
 alter publication supabase_realtime add table public.kassensturz;
 alter publication supabase_realtime add table public.shopping_items;
+alter publication supabase_realtime add table public.fixkosten;

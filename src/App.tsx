@@ -1,17 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart } from 'lucide-react';
+import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart, Landmark } from 'lucide-react';
 import { useStore } from './storage';
 import { BalanceCard } from './components/BalanceCard';
 import { AddExpenseForm } from './components/AddExpenseForm';
 import { ExpenseList } from './components/ExpenseList';
 import { KassensturzPeriod } from './components/KassensturzPeriod';
 import { ShoppingList } from './components/ShoppingList';
+import { FixkostenTab } from './components/FixkostenTab';
 import { SettingsModal } from './components/SettingsModal';
 import { expensesThisMonth, totalExpenses, formatCurrency } from './calculations';
 import { CATEGORIES } from './constants';
 import { CategoryIcon } from './components/CategoryIcon';
 
-type Tab = 'overview' | 'add' | 'history' | 'shopping';
+type Tab = 'overview' | 'add' | 'history' | 'shopping' | 'fixkosten';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -38,6 +39,8 @@ export default function App() {
     toggleShoppingItem,
     deleteShoppingItem,
     resetShoppingList,
+    fixkosten,
+    updateFixkosten,
   } = useStore();
 
   const kassensturzPeriods = useMemo(() =>
@@ -288,6 +291,15 @@ export default function App() {
             />
           </div>
         )}
+
+        {/* ── Fixkosten ── */}
+        {tab === 'fixkosten' && (
+          <FixkostenTab
+            fixkosten={fixkosten}
+            settings={settings}
+            onUpdate={updateFixkosten}
+          />
+        )}
       </main>
 
       {/* ── Bottom Nav ── */}
@@ -336,6 +348,16 @@ export default function App() {
             </span>
           )}
           <span className="text-[10px]">Liste</span>
+        </button>
+
+        <button
+          onClick={() => setTab('fixkosten')}
+          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors ${
+            tab === 'fixkosten' ? 'text-slate-700' : 'text-gray-400'
+          }`}
+        >
+          <Landmark size={20} />
+          <span className="text-[10px]">Fixkosten</span>
         </button>
       </nav>
 

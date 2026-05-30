@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Expense, Settings, Kassensturz, ShoppingItem } from './types';
+import { Expense, Settings, Kassensturz, ShoppingItem, FixkostenAmounts } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 import { supabase } from './supabaseClient';
 
@@ -40,6 +40,7 @@ export interface StoreResult {
   archivedExpenses:     Expense[];
   kassensturzList:      Kassensturz[];
   shoppingItems:        ShoppingItem[];
+  fixkosten:            Record<string, FixkostenAmounts>;
   settings:             Settings;
   loading:              boolean;
   error:                string | null;
@@ -54,12 +55,14 @@ export interface StoreResult {
   toggleShoppingItem:   (id: string) => void;
   deleteShoppingItem:   (id: string) => void;
   resetShoppingList:    () => Promise<void>;
+  updateFixkosten:      (key: string, person: 'person1' | 'person2', amount: number) => void;
 }
 
 export function useStore(): StoreResult {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [kassensturzList, setKassensturzList] = useState<Kassensturz[]>([]);
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
+  const [fixkosten, setFixkosten] = useState<Record<string, FixkostenAmounts>>({});
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,8 +122,21 @@ export function useStore(): StoreResult {
       setShoppingItems((data ?? []).map(dbToShoppingItem));
     };
 
+    const fetchFixkosten = async () => {
+      const { data } = await supabase.from('fixkosten').select('*');
+      if (!mounted) return;
+      const map: Record<string, FixkostenAmounts> = {};
+      for (const row of data ?? []) {
+        map[row.key as string] = {
+          person1Amount: Number(row.person1_amount),
+          person2Amount: Number(row.person2_amount),
+        };
+      }
+      setFixkosten(map);
+    };
+
     void Promise.all([
-      fetchExpenses(), fetchSettings(), fetchKassensturz(), fetchShoppingItems(),
+      fetchExpenses(), fetchSettings(), fetchKassensturz(), fetchShoppingItems(), fetchFixkosten(),
     ]).finally(() => { if (mounted) setLoading(false); });
 
     const channel = supabase
@@ -129,6 +145,7 @@ export function useStore(): StoreResult {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'kassensturz' }, fetchKassensturz)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items' }, fetchShoppingItems)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fixkosten' }, fetchFixkosten)
       .subscribe();
 
     const poll = setInterval(() => {
@@ -150,6 +167,7 @@ export function useStore(): StoreResult {
     archivedExpenses,
     kassensturzList,
     shoppingItems,
+    fixkosten,
     settings,
     loading,
     error,
@@ -299,6 +317,32 @@ export function useStore(): StoreResult {
         const { error: err } = await supabase.from('shopping_items').delete().in('id', ids);
         if (err) setOpError(`Liste konnte nicht zurückgesetzt werden: ${err.message}`);
       }
+    },
+
+    updateFixkosten(key: string, person: 'person1' | 'person2', amount: number) {
+      const snapshot = fixkosten;
+      const current = fixkosten[key] ?? { person1Amount: 0, person2Amount: 0 };
+      const updated: FixkostenAmounts = person === 'person1'
+        ? { ...current, person1Amount: amount }
+        : { ...current, person2Amount: amount };
+      setFixkosten(prev => ({ ...prev, [key]: updated }));
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('fixkosten').upsert({
+            key,
+            person1_amount: updated.person1Amount,
+            person2_amount: updated.person2Amount,
+          });
+          if (err) {
+            setFixkosten(snapshot);
+            setOpError(`Fixkosten konnten nicht gespeichert werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setFixkosten(snapshot);
+          setOpError(`Netzwerkfehler beim Speichern der Fixkosten. (${msg})`);
+        }
+      })();
     },
   };
 }
