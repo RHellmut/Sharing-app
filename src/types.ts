@@ -53,4 +53,7 @@ export interface VertragsEntry {
   anbieter: string;
   vertragsbeginn: string | null;
   vertragsende: string | null;
+  gekuendigt: boolean;
+  neuerAnbieter: string;
+  laeuftAb: string | null;
 }

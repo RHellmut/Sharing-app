@@ -27,7 +27,7 @@ interface Props {
   vertraege:       Record<string, VertragsEntry>;
   settings:        Settings;
   onUpdate:        (key: string, person: 'person1' | 'person2', amount: number) => void;
-  onUpdateVertrag: (key: string, field: 'anbieter' | 'vertragsbeginn' | 'vertragsende', value: string) => void;
+  onUpdateVertrag: (key: string, field: string, value: string | boolean) => void;
 }
 
 /* ── helpers ──────────────────────────────────────────── */
@@ -96,10 +96,17 @@ export function FixkostenTab({ fixkosten, vertraege, settings, onUpdate, onUpdat
   function toAnbieterDraft(v: Record<string, VertragsEntry>): Record<ContractKey, string> {
     return Object.fromEntries(CONTRACT_ITEMS.map(({ key }) => [key, v[key]?.anbieter ?? ''])) as Record<ContractKey, string>;
   }
+  function toNeuerAnbieterDraft(v: Record<string, VertragsEntry>): Record<ContractKey, string> {
+    return Object.fromEntries(CONTRACT_ITEMS.map(({ key }) => [key, v[key]?.neuerAnbieter ?? ''])) as Record<ContractKey, string>;
+  }
 
-  const [anbieterDraft, setAnbieterDraft] = useState<Record<ContractKey, string>>(() => toAnbieterDraft(vertraege));
+  const [anbieterDraft,     setAnbieterDraft]     = useState<Record<ContractKey, string>>(() => toAnbieterDraft(vertraege));
+  const [neuerAnbieterDraft, setNeuerAnbieterDraft] = useState<Record<ContractKey, string>>(() => toNeuerAnbieterDraft(vertraege));
 
-  useEffect(() => { setAnbieterDraft(toAnbieterDraft(vertraege)); }, [vertraege]);
+  useEffect(() => {
+    setAnbieterDraft(toAnbieterDraft(vertraege));
+    setNeuerAnbieterDraft(toNeuerAnbieterDraft(vertraege));
+  }, [vertraege]);
 
   /* ── render ── */
   return (
@@ -216,11 +223,17 @@ export function FixkostenTab({ fixkosten, vertraege, settings, onUpdate, onUpdat
 
           {CONTRACT_ITEMS.map(({ key, label, Icon }) => {
             const entry = vertraege[key];
+            const gekuendigt = entry?.gekuendigt ?? false;
             return (
               <div key={key} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
                   <Icon size={15} className="text-slate-500 flex-shrink-0" />
                   <span className="font-medium text-gray-700 text-sm">{label}</span>
+                  {gekuendigt && (
+                    <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                      Gekündigt
+                    </span>
+                  )}
                 </div>
                 <div className="px-4 py-4 space-y-4">
 
@@ -261,6 +274,51 @@ export function FixkostenTab({ fixkosten, vertraege, settings, onUpdate, onUpdat
                       </div>
                     ))}
                   </div>
+
+                  {/* Kündigung toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer select-none pt-1">
+                    <div
+                      onClick={() => onUpdateVertrag(key, 'gekuendigt', !gekuendigt)}
+                      className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${gekuendigt ? 'bg-amber-500' : 'bg-gray-200'}`}
+                    >
+                      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${gekuendigt ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </div>
+                    <span className="text-sm text-gray-700">Bereits gekündigt</span>
+                  </label>
+
+                  {/* Conditional fields when cancelled */}
+                  {gekuendigt && (
+                    <div className="space-y-4 pt-1 border-t border-gray-100">
+                      <div>
+                        <label className="text-xs text-gray-400 block mb-1.5">Neuer Anbieter</label>
+                        <input
+                          type="text"
+                          value={neuerAnbieterDraft[key]}
+                          onChange={e => setNeuerAnbieterDraft(prev => ({ ...prev, [key]: e.target.value }))}
+                          onBlur={() => onUpdateVertrag(key, 'neuerAnbieter', neuerAnbieterDraft[key])}
+                          placeholder="z.B. E.ON"
+                          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-400 block mb-1.5">Vertrag läuft ab</label>
+                        <div className="relative">
+                          <div className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white text-gray-800 text-base pointer-events-none select-none min-h-[50px]">
+                            {entry?.laeuftAb
+                              ? formatDate(entry.laeuftAb)
+                              : <span className="text-gray-400 text-sm">Datum wählen</span>
+                            }
+                          </div>
+                          <input
+                            type="date"
+                            value={entry?.laeuftAb ?? ''}
+                            onChange={e => onUpdateVertrag(key, 'laeuftAb', e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                 </div>
               </div>

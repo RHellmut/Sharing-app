@@ -108,10 +108,13 @@ create policy "anon_update_fixkosten" on public.fixkosten for update to anon usi
 
 -- Verträge-Tabelle (Vertragsdaten für Strom und Internet)
 create table if not exists public.vertraege (
-  key            text  primary key,   -- 'strom' | 'internet'
-  anbieter       text  not null default '',
+  key            text    primary key,   -- 'strom' | 'internet'
+  anbieter       text    not null default '',
   vertragsbeginn date,
-  vertragsende   date
+  vertragsende   date,
+  gekuendigt     boolean not null default false,
+  neuer_anbieter text    not null default '',
+  laeuft_ab      date
 );
 
 insert into public.vertraege (key) values ('strom'), ('internet')

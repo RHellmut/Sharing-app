@@ -57,7 +57,7 @@ export interface StoreResult {
   deleteShoppingItem:   (id: string) => void;
   resetShoppingList:    () => Promise<void>;
   updateFixkosten:      (key: string, person: 'person1' | 'person2', amount: number) => void;
-  updateVertrag:        (key: string, field: 'anbieter' | 'vertragsbeginn' | 'vertragsende', value: string) => void;
+  updateVertrag:        (key: string, field: string, value: string | boolean) => void;
 }
 
 export function useStore(): StoreResult {
@@ -145,9 +145,12 @@ export function useStore(): StoreResult {
       for (const row of data ?? []) {
         map[row.key as string] = {
           key:             row.key as string,
-          anbieter:        (row.anbieter as string) ?? '',
-          vertragsbeginn:  (row.vertragsbeginn as string | null) ?? null,
-          vertragsende:    (row.vertragsende  as string | null) ?? null,
+          anbieter:        (row.anbieter       as string)         ?? '',
+          vertragsbeginn:  (row.vertragsbeginn as string | null)  ?? null,
+          vertragsende:    (row.vertragsende   as string | null)  ?? null,
+          gekuendigt:      (row.gekuendigt     as boolean)        ?? false,
+          neuerAnbieter:   (row.neuer_anbieter as string)         ?? '',
+          laeuftAb:        (row.laeuft_ab      as string | null)  ?? null,
         };
       }
       setVertraege(map);
@@ -340,10 +343,14 @@ export function useStore(): StoreResult {
       }
     },
 
-    updateVertrag(key: string, field: 'anbieter' | 'vertragsbeginn' | 'vertragsende', value: string) {
+    updateVertrag(key: string, field: string, value: string | boolean) {
       const snapshot = vertraege;
-      const current = vertraege[key] ?? { key, anbieter: '', vertragsbeginn: null, vertragsende: null };
-      const updated: VertragsEntry = { ...current, [field]: value || null };
+      const current: VertragsEntry = vertraege[key] ?? {
+        key, anbieter: '', vertragsbeginn: null, vertragsende: null,
+        gekuendigt: false, neuerAnbieter: '', laeuftAb: null,
+      };
+      const fieldValue = typeof value === 'boolean' ? value : (value || null);
+      const updated: VertragsEntry = { ...current, [field]: fieldValue };
       setVertraege(prev => ({ ...prev, [key]: updated }));
       void (async () => {
         try {
@@ -352,6 +359,9 @@ export function useStore(): StoreResult {
             anbieter:       updated.anbieter,
             vertragsbeginn: updated.vertragsbeginn ?? null,
             vertragsende:   updated.vertragsende   ?? null,
+            gekuendigt:     updated.gekuendigt,
+            neuer_anbieter: updated.neuerAnbieter,
+            laeuft_ab:      updated.laeuftAb       ?? null,
           });
           if (err) {
             setVertraege(snapshot);
