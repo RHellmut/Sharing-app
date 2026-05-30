@@ -55,7 +55,7 @@ export function SettingsModal({ settings, onUpdate, onClose }: Props) {
           </div>
         </div>
 
-        <div className="p-5 border-t border-gray-100">
+        <div className="p-5 border-t border-gray-100 space-y-3">
           <button
             onClick={handleSave}
             className="w-full bg-slate-700 hover:bg-slate-800 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2 transition-colors"
@@ -63,6 +63,15 @@ export function SettingsModal({ settings, onUpdate, onClose }: Props) {
             <Save size={18} />
             Speichern
           </button>
+          <p className="text-center text-[11px] text-gray-400 leading-relaxed">
+            Version {__APP_VERSION__}
+            <br />
+            Zuletzt aktualisiert:{' '}
+            {new Date(__BUILD_TIME__).toLocaleString('de-DE', {
+              day: 'numeric', month: 'long', year: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            })} Uhr
+          </p>
         </div>
       </div>
     </div>
