@@ -143,7 +143,7 @@ export function WorldTravel({ visited, onToggle, onBack }: Props) {
                           key={`lbl-${geo.rsmKey}`}
                           x={pos[0]}
                           y={pos[1]}
-                          fontSize={2.8 / zoom}
+                          fontSize={3.4 / zoom}
                           textAnchor="middle"
                           dominantBaseline="central"
                           fill="#1e293b"
