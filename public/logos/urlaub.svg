@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="18" fill="#0369A1"/>
+  <!-- Sea -->
+  <rect x="0" y="72" width="100" height="28" rx="0" fill="#0284C7"/>
+  <!-- Hull -->
+  <path d="M15 72 L20 86 Q50 92 80 86 L85 72 Z" fill="#1E293B"/>
+  <!-- Deck -->
+  <rect x="22" y="60" width="56" height="12" rx="2" fill="#F1F5F9"/>
+  <!-- Superstructure level 1 -->
+  <rect x="30" y="48" width="40" height="13" rx="2" fill="#E2E8F0"/>
+  <!-- Superstructure level 2 -->
+  <rect x="36" y="38" width="28" height="11" rx="2" fill="#CBD5E1"/>
+  <!-- Funnel -->
+  <rect x="44" y="26" width="12" height="14" rx="3" fill="#EF4444"/>
+  <rect x="44" y="24" width="12" height="5" rx="2" fill="#374151"/>
+  <!-- Smoke -->
+  <circle cx="50" cy="20" r="3" fill="#94A3B8" opacity="0.6"/>
+  <circle cx="53" cy="16" r="2" fill="#94A3B8" opacity="0.4"/>
+  <!-- Windows deck 1 -->
+  <rect x="34" y="52" width="5" height="4" rx="1" fill="#7DD3FC"/>
+  <rect x="43" y="52" width="5" height="4" rx="1" fill="#7DD3FC"/>
+  <rect x="52" y="52" width="5" height="4" rx="1" fill="#7DD3FC"/>
+  <rect x="61" y="52" width="5" height="4" rx="1" fill="#7DD3FC"/>
+  <!-- Windows deck 2 -->
+  <rect x="40" y="42" width="4" height="3" rx="1" fill="#7DD3FC"/>
+  <rect x="48" y="42" width="4" height="3" rx="1" fill="#7DD3FC"/>
+  <rect x="56" y="42" width="4" height="3" rx="1" fill="#7DD3FC"/>
+  <!-- Waves -->
+  <path d="M10 80 Q20 77 30 80 Q40 83 50 80 Q60 77 70 80 Q80 83 90 80" stroke="white" stroke-width="1.5" fill="none" opacity="0.5"/>
+</svg>

@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>C4 Architekturdiagramm – Catriver Cost</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f4f5f7;
+    color: #1a1a2e;
+    padding: 32px 24px 80px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 48px;
+  }
+
+  /* ── Level headings ── */
+  .level-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+    margin-top: 56px;
+  }
+  .level-desc {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 28px;
+  }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #374151;
+  }
+  .legend-box {
+    width: 18px; height: 18px;
+    border-radius: 3px;
+    border: 2px solid rgba(0,0,0,0.2);
+  }
+
+  /* ── Diagram canvas ── */
+  .diagram {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    overflow-x: auto;
+  }
+
+  /* ── Boundary box ── */
+  .boundary {
+    border: 2px dashed #94a3b8;
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+    margin: 12px 0;
+  }
+  .boundary-label {
+    position: absolute;
+    top: -12px;
+    left: 14px;
+    background: white;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* ── Row & column layouts ── */
+  .row {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+  .spacer { height: 16px; }
+
+  /* ── Arrow layer ── */
+  .arrow-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    margin: 2px 0;
+    position: relative;
+  }
+  .arrow-down {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: 0 auto;
+  }
+  .arrow-line {
+    width: 2px;
+    height: 28px;
+    background: #94a3b8;
+  }
+  .arrow-label {
+    font-size: 10px;
+    color: #64748b;
+    background: white;
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+  }
+  .arrow-head {
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 8px solid #94a3b8;
+  }
+  .arrow-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 80px;
+  }
+  .arrow-h-line {
+    flex: 1;
+    height: 2px;
+    background: #94a3b8;
+  }
+  .arrow-h-head {
+    width: 0; height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 8px solid #94a3b8;
+  }
+
+  /* ── NODE TYPES ── */
+
+  /* Person */
+  .node-person {
+    background: #dbeafe;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    padding: 14px 16px;
+    width: 160px;
+    text-align: center;
+  }
+  .node-person .node-icon { font-size: 28px; margin-bottom: 6px; }
+  .node-person .node-type { font-size: 10px; color: #1e40af; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 4px; }
+  .node-person .node-name { font-size: 14px; font-weight: 700; color: #1e3a8a; margin-bottom: 4px; }
+  .node-person .node-desc { font-size: 11px; color: #1e40af; line-height: 1.4; }
+
+  /* Internal system */
+  .node-system {
+    background: #1d4ed8;
+    border: 2px solid #1e3a8a;
+    border-radius: 8px;
+    padding: 14px 16px;
+    width: 200px;
+    text-align: center;
+    color: white;
+  }
+  .node-system .node-icon { font-size: 26px; margin-bottom: 6px; }
+  .node-system .node-type { font-size: 10px; color: #bfdbfe; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 4px; }
+  .node-system .node-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .node-system .node-desc { font-size: 11px; color: #bfdbfe; line-height: 1.4; }
+
+  /* External system */
+  .node-external {
+    background: #4b5563;
+    border: 2px solid #374151;
+    border-radius: 8px;
+    padding: 14px 16px;
+    width: 200px;
+    text-align: center;
+    color: white;
+  }
+  .node-external .node-icon { font-size: 26px; margin-bottom: 6px; }
+  .node-external .node-type { font-size: 10px; color: #d1d5db; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 4px; }
+  .node-external .node-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .node-external .node-desc { font-size: 11px; color: #d1d5db; line-height: 1.4; }
+
+  /* Container (internal) */
+  .node-container {
+    background: #0ea5e9;
+    border: 2px solid #0369a1;
+    border-radius: 8px;
+    padding: 12px 14px;
+    width: 190px;
+    text-align: center;
+    color: white;
+  }
+  .node-container .node-icon { font-size: 22px; margin-bottom: 5px; }
+  .node-container .node-type { font-size: 10px; color: #e0f2fe; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 3px; }
+  .node-container .node-tech { font-size: 10px; color: #bae6fd; font-style: italic; margin-bottom: 3px; }
+  .node-container .node-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .node-container .node-desc { font-size: 11px; color: #e0f2fe; line-height: 1.4; }
+
+  /* Container (external/Supabase) */
+  .node-container-ext {
+    background: #6b7280;
+    border: 2px solid #4b5563;
+    border-radius: 8px;
+    padding: 12px 14px;
+    width: 190px;
+    text-align: center;
+    color: white;
+  }
+  .node-container-ext .node-icon { font-size: 22px; margin-bottom: 5px; }
+  .node-container-ext .node-type { font-size: 10px; color: #f3f4f6; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 3px; }
+  .node-container-ext .node-tech { font-size: 10px; color: #d1d5db; font-style: italic; margin-bottom: 3px; }
+  .node-container-ext .node-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .node-container-ext .node-desc { font-size: 11px; color: #d1d5db; line-height: 1.4; }
+
+  /* Component */
+  .node-component {
+    background: #e0f2fe;
+    border: 2px solid #0369a1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    width: 170px;
+    text-align: center;
+  }
+  .node-component .node-icon { font-size: 18px; margin-bottom: 4px; }
+  .node-component .node-type { font-size: 10px; color: #0369a1; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 3px; }
+  .node-component .node-tech { font-size: 10px; color: #0284c7; font-style: italic; margin-bottom: 3px; }
+  .node-component .node-name { font-size: 12px; font-weight: 700; color: #0c4a6e; margin-bottom: 3px; }
+  .node-component .node-desc { font-size: 10px; color: #0369a1; line-height: 1.4; }
+
+  /* Database component */
+  .node-db {
+    background: #f0fdf4;
+    border: 2px solid #16a34a;
+    border-radius: 8px;
+    padding: 10px 12px;
+    width: 170px;
+    text-align: center;
+  }
+  .node-db .node-icon { font-size: 18px; margin-bottom: 4px; }
+  .node-db .node-type { font-size: 10px; color: #15803d; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; margin-bottom: 3px; }
+  .node-db .node-tech { font-size: 10px; color: #16a34a; font-style: italic; margin-bottom: 3px; }
+  .node-db .node-name { font-size: 12px; font-weight: 700; color: #14532d; margin-bottom: 3px; }
+  .node-db .node-desc { font-size: 10px; color: #15803d; line-height: 1.4; }
+
+  /* Relationship arrow with label */
+  .rel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #475569;
+    white-space: nowrap;
+    margin: 4px 0;
+  }
+  .rel-line {
+    flex: 1;
+    height: 1px;
+    min-width: 30px;
+    border-top: 1.5px dashed #94a3b8;
+    position: relative;
+  }
+  .rel-line::after {
+    content: '▶';
+    position: absolute;
+    right: -6px;
+    top: -8px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+
+  /* Grid for components */
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* Connection lines drawn via SVG overlay */
+  .diagram-relative {
+    position: relative;
+  }
+
+  /* Relationship labels as floating badges */
+  .rel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #374151;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 3px 10px;
+    white-space: nowrap;
+  }
+  .rel-badge .arrow { color: #94a3b8; }
+
+  /* Section divider */
+  hr.divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 32px 0;
+  }
+
+  /* Relationship table */
+  .rel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 20px;
+  }
+  .rel-table th {
+    text-align: left;
+    padding: 6px 10px;
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .rel-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+  }
+  .rel-table tr:hover td { background: #f8fafc; }
+
+  /* Data flow box */
+  .flow-box {
+    background: #fafafa;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 12px;
+    margin-top: 24px;
+  }
+  .flow-box h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: #0f172a; }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .flow-num {
+    min-width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #1d4ed8;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .flow-text { color: #374151; line-height: 1.5; }
+  .code { font-family: 'Courier New', monospace; background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+
+  @media (max-width: 768px) {
+    .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .row { flex-direction: column; align-items: center; }
+  }
+  @media (max-width: 480px) {
+    .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>C4 Architekturdiagramm</h1>
+<p class="subtitle">Catriver Cost – Expense-Sharing PWA &nbsp;·&nbsp; Stand: Mai 2026</p>
+
+<!-- ════════════════════════════════════════
+     LEVEL 1 – SYSTEM CONTEXT
+     ════════════════════════════════════════ -->
+<p class="level-title">Level 1 – System Context</p>
+<p class="level-desc">Wer benutzt das System? Welche externen Systeme sind beteiligt?</p>
+
+<div class="diagram">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-box" style="background:#dbeafe;border-color:#3b82f6"></div> Person</div>
+    <div class="legend-item"><div class="legend-box" style="background:#1d4ed8;border-color:#1e3a8a"></div> Software-System (intern)</div>
+    <div class="legend-item"><div class="legend-box" style="background:#4b5563;border-color:#374151"></div> Software-System (extern)</div>
+  </div>
+
+  <!-- Persons -->
+  <div class="row" style="margin-bottom:32px">
+    <div class="node-person">
+      <div class="node-icon">👤</div>
+      <div class="node-type">Person</div>
+      <div class="node-name">René</div>
+      <div class="node-desc">Nutzer 1 – gibt Ausgaben ein, sieht Saldo</div>
+    </div>
+    <div style="width:80px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px">&amp;</div>
+    <div class="node-person">
+      <div class="node-icon">👤</div>
+      <div class="node-type">Person</div>
+      <div class="node-name">Lisa</div>
+      <div class="node-desc">Nutzer 2 – sieht Echtzeit-Updates auf dem eigenen Handy</div>
+    </div>
+  </div>
+
+  <!-- Down arrows to system -->
+  <div class="row" style="margin-bottom:4px;gap:290px">
+    <div class="arrow-down">
+      <div class="arrow-line"></div>
+      <div class="arrow-label">öffnet PWA</div>
+      <div class="arrow-line"></div>
+      <div class="arrow-head"></div>
+    </div>
+    <div class="arrow-down">
+      <div class="arrow-line"></div>
+      <div class="arrow-label">öffnet PWA</div>
+      <div class="arrow-line"></div>
+      <div class="arrow-head"></div>
+    </div>
+  </div>
+
+  <!-- Central system -->
+  <div class="row" style="margin-bottom:20px">
+    <div class="boundary" style="padding:24px 40px">
+      <div class="boundary-label">🌐 Browser / iOS PWA</div>
+      <div class="row">
+        <div class="node-system">
+          <div class="node-icon">💰</div>
+          <div class="node-type">Software System</div>
+          <div class="node-name">Catriver Cost</div>
+          <div class="node-desc">Expense-Sharing-App<br/>React SPA + Service Worker<br/>deployed auf Vercel</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Arrow to Supabase -->
+  <div class="row" style="margin-bottom:4px">
+    <div class="arrow-down">
+      <div class="arrow-line"></div>
+      <div class="arrow-label">REST + WebSocket (Realtime)</div>
+      <div class="arrow-line"></div>
+      <div class="arrow-head"></div>
+    </div>
+  </div>
+
+  <!-- External: Supabase -->
+  <div class="row" style="margin-bottom:20px">
+    <div class="node-external">
+      <div class="node-icon">🗄️</div>
+      <div class="node-type">Externes System</div>
+      <div class="node-name">Supabase Cloud</div>
+      <div class="node-desc">PostgreSQL-Datenbank, Realtime-Service, REST API – keine eigene Infrastruktur</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="node-external">
+        <div class="node-icon">🚀</div>
+        <div class="node-type">Externes System</div>
+        <div class="node-name">Vercel CDN</div>
+        <div class="node-desc">Hosting &amp; Auto-Deploy<br/>aus GitHub main branch</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Relationship table -->
+  <table class="rel-table">
+    <tr><th>Von</th><th>Zu</th><th>Beschreibung</th><th>Protokoll</th></tr>
+    <tr><td>René / Lisa</td><td>Catriver Cost</td><td>Ausgaben erfassen, Saldo einsehen, Einkaufsliste verwalten</td><td>HTTPS, PWA</td></tr>
+    <tr><td>Catriver Cost</td><td>Supabase Cloud</td><td>Lesen/Schreiben von Expenses, Settings, Kassensturz, ShoppingItems</td><td>HTTPS REST + WSS</td></tr>
+    <tr><td>Supabase Cloud</td><td>Catriver Cost</td><td>Echtzeit-Push bei Datenbankänderungen (postgres_changes events)</td><td>WebSocket</td></tr>
+    <tr><td>GitHub (main)</td><td>Vercel CDN</td><td>Automatischer Deploy bei Push auf main</td><td>Webhook / CI</td></tr>
+  </table>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     LEVEL 2 – CONTAINER
+     ════════════════════════════════════════ -->
+<p class="level-title">Level 2 – Container</p>
+<p class="level-desc">Welche technischen Bausteine (Prozesse, Deployments, Datenspeicher) bilden das System?</p>
+
+<div class="diagram">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-box" style="background:#0ea5e9;border-color:#0369a1"></div> Container (intern)</div>
+    <div class="legend-item"><div class="legend-box" style="background:#6b7280;border-color:#4b5563"></div> Container (Supabase)</div>
+  </div>
+
+  <div class="row" style="align-items:stretch;gap:24px">
+
+    <!-- Left: Browser -->
+    <div class="boundary" style="flex:1;min-width:280px">
+      <div class="boundary-label">📱 Browser / iOS Safari (PWA)</div>
+      <div class="col">
+        <div class="node-container">
+          <div class="node-icon">⚛️</div>
+          <div class="node-type">Container: SPA</div>
+          <div class="node-tech">React 18 + TypeScript + Vite</div>
+          <div class="node-name">React App</div>
+          <div class="node-desc">UI-Logik, Zustandsverwaltung, optimistische Updates, Tab-Navigation</div>
+        </div>
+        <div class="node-container" style="background:#7c3aed;border-color:#5b21b6">
+          <div class="node-icon">⚙️</div>
+          <div class="node-type">Container: Service Worker</div>
+          <div class="node-tech">Web Workers API</div>
+          <div class="node-name">Service Worker (sw.js)</div>
+          <div class="node-desc">Offline-Cache (Cache-First für Assets, Network-First für Navigation). Supabase-Calls werden nie gecacht.</div>
+        </div>
+        <div class="node-container" style="background:#d97706;border-color:#92400e">
+          <div class="node-icon">📦</div>
+          <div class="node-type">Container: Static Assets</div>
+          <div class="node-tech">Vercel CDN</div>
+          <div class="node-name">Compiled SPA Bundle</div>
+          <div class="node-desc">HTML, JS, CSS, PWA-Manifest, Icons – ausgeliefert über HTTPS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Supabase -->
+    <div class="boundary" style="flex:1;min-width:280px">
+      <div class="boundary-label">☁️ Supabase Cloud (extern)</div>
+      <div class="col">
+        <div class="node-container-ext">
+          <div class="node-icon">🔌</div>
+          <div class="node-type">Container: REST API</div>
+          <div class="node-tech">PostgREST (auto-generiert)</div>
+          <div class="node-name">Supabase REST API</div>
+          <div class="node-desc">CRUD-Operationen auf allen Tabellen. Authentifizierung via anon-Key + RLS.</div>
+        </div>
+        <div class="node-container-ext">
+          <div class="node-icon">📡</div>
+          <div class="node-type">Container: Realtime</div>
+          <div class="node-tech">Phoenix Channels / WebSocket</div>
+          <div class="node-name">Supabase Realtime</div>
+          <div class="node-desc">Broadcast von postgres_changes-Events. Alle 4 Tabellen sind in der supabase_realtime-Publication.</div>
+        </div>
+        <div class="node-container-ext" style="background:#166534;border-color:#14532d">
+          <div class="node-icon">🗄️</div>
+          <div class="node-type">Container: Datenbank</div>
+          <div class="node-tech">PostgreSQL 15 (Supabase managed)</div>
+          <div class="node-name">PostgreSQL DB</div>
+          <div class="node-desc">expenses, settings, kassensturz, shopping_items – alle mit Row Level Security (anon-Policies).</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Relationships -->
+  <table class="rel-table" style="margin-top:24px">
+    <tr><th>Von</th><th>Zu</th><th>Beschreibung</th><th>Protokoll</th></tr>
+    <tr><td>React App</td><td>Supabase REST API</td><td>Initiales Laden + CRUD (insert, delete, update) – optimistisch mit Rollback</td><td>HTTPS / fetch</td></tr>
+    <tr><td>React App</td><td>Supabase Realtime</td><td>Subscription auf alle Tabellen + 30s Polling-Fallback</td><td>WebSocket (wss://)</td></tr>
+    <tr><td>Supabase Realtime</td><td>React App</td><td>Push-Events bei Änderungen durch anderen Client (zweites Handy)</td><td>WebSocket (push)</td></tr>
+    <tr><td>Service Worker</td><td>Supabase REST API</td><td>Supabase-Requests passieren den SW unverändert (network-only)</td><td>HTTPS passthrough</td></tr>
+    <tr><td>Browser</td><td>Static Assets (Vercel)</td><td>Erster Seitenaufruf lädt HTML/JS/CSS vom CDN</td><td>HTTPS</td></tr>
+  </table>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     LEVEL 3 – COMPONENT (React App)
+     ════════════════════════════════════════ -->
+<p class="level-title">Level 3 – Komponenten (React App)</p>
+<p class="level-desc">Welche internen Bausteine enthält der React-App-Container?</p>
+
+<div class="diagram">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-box" style="background:#e0f2fe;border-color:#0369a1"></div> React-Komponente</div>
+    <div class="legend-item"><div class="legend-box" style="background:#f0fdf4;border-color:#16a34a"></div> Utility / Hook</div>
+    <div class="legend-item"><div class="legend-box" style="background:#fef9c3;border-color:#ca8a04"></div> Konfiguration</div>
+  </div>
+
+  <!-- Entry & root -->
+  <div class="row" style="margin-bottom:12px">
+    <div class="node-component" style="background:#fef9c3;border-color:#ca8a04;width:130px">
+      <div class="node-icon">📄</div>
+      <div class="node-type">Entry Point</div>
+      <div class="node-tech">index.html + main.tsx</div>
+      <div class="node-name">App Mount</div>
+      <div class="node-desc">React DOM root, SW-Registrierung</div>
+    </div>
+  </div>
+  <div class="row" style="margin-bottom:4px">
+    <div class="arrow-down"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+  </div>
+
+  <!-- App.tsx -->
+  <div class="row" style="margin-bottom:12px">
+    <div class="node-component" style="background:#ddd6fe;border-color:#7c3aed;width:360px">
+      <div class="node-icon">🏠</div>
+      <div class="node-type">Root-Komponente</div>
+      <div class="node-tech">App.tsx</div>
+      <div class="node-name">App</div>
+      <div class="node-desc">Tab-Navigation (Übersicht / Hinzufügen / Verlauf / Liste), Header, Bottom-Nav, opError-Banner, Settings-Modal-Steuerung</div>
+    </div>
+  </div>
+  <div class="row" style="margin-bottom:4px">
+    <div class="arrow-down"><div class="arrow-line"></div><div class="arrow-label">konsumiert</div><div class="arrow-line"></div><div class="arrow-head"></div></div>
+  </div>
+
+  <!-- State layer -->
+  <div class="row" style="margin-bottom:12px">
+    <div class="node-db" style="width:360px">
+      <div class="node-icon">🔄</div>
+      <div class="node-type">State-Management Hook</div>
+      <div class="node-tech">storage.ts · useStore()</div>
+      <div class="node-name">useStore</div>
+      <div class="node-desc">
+        Lädt und synct: <strong>expenses</strong>, <strong>settings</strong>, <strong>kassensturzList</strong>, <strong>shoppingItems</strong><br/>
+        Berechnet: activeExpenses, archivedExpenses<br/>
+        Mutations: addExpense, deleteExpense, updateSettings, performKassensturz, deleteKassensturz, addShoppingItem, toggleShoppingItem, deleteShoppingItem, resetShoppingList
+      </div>
+    </div>
+  </div>
+  <div class="row" style="margin-bottom:4px">
+    <div class="arrow-down"><div class="arrow-line"></div><div class="arrow-label">Props + Callbacks</div><div class="arrow-line"></div><div class="arrow-head"></div></div>
+  </div>
+
+  <!-- UI Components grid -->
+  <div class="boundary">
+    <div class="boundary-label">UI-Komponenten (src/components/)</div>
+    <div class="grid-4" style="margin-bottom:12px">
+      <div class="node-component">
+        <div class="node-icon">💳</div>
+        <div class="node-type">Komponente</div>
+        <div class="node-tech">BalanceCard.tsx</div>
+        <div class="node-name">BalanceCard</div>
+        <div class="node-desc">Saldo, Kassensturz-Button mit Bestätigung, Vacation Mode</div>
+      </div>
+      <div class="node-component">
+        <div class="node-icon">➕</div>
+        <div class="node-type">Komponente</div>
+        <div class="node-tech">AddExpenseForm.tsx</div>
+        <div class="node-name">AddExpenseForm</div>
+        <div class="node-desc">Formular: Beschreibung, Betrag, Kategorie, Bezahler, Split, Foto, Datum</div>
+      </div>
+      <div class="node-component">
+        <div class="node-icon">📋</div>
+        <div class="node-type">Komponente</div>
+        <div class="node-tech">ExpenseList.tsx</div>
+        <div class="node-name">ExpenseList</div>
+        <div class="node-desc">Listenansicht mit Kategorie-/Monatsfilter und Zusammenfassung</div>
+      </div>
+      <div class="node-component">
+        <div class="node-icon">🧾</div>
+        <div class="node-type">Komponente</div>
+        <div class="node-tech">ExpenseItem.tsx</div>
+        <div class="node-name">ExpenseItem</div>
+        <div class="node-desc">Einzelner Eintrag, aufklappbar: Split, Notizen, Belego-Foto-Overlay</div>
+      </div>
+      <div class="node-component">
+        <div class="node-icon">📦</div>
+        <div class="node-type">Komponente</div>
+        <div class="node-tech">KassensturzPeriod.tsx</div>
+        <div class="node-name">KassensturzPeriod</div>
+        <div class="node-desc">Archiv-Karte: Ausgabenliste, PDF-Export, Löschen mit Bestätigung</div>
+      </div>
+      <div class="node-component">
+        <div class="node-icon">🛒</div>
+        <div class="node-type">Komponente</div>
+        <div class="node-tech">ShoppingList.tsx</div>
+        <div class="node-name">ShoppingList</div>
+        <div class="node-desc">Einkaufsliste mit Abhaken, Löschen, Hinzufügen, Reset</div>
+      </div>
+      <div class="node-component">
+        <div class="node-icon">⚙️</div>
+        <div class="node-type">Komponente</div>
+        <div class="node-tech">SettingsModal.tsx</div>
+        <div class="node-name">SettingsModal</div>
+        <div class="node-desc">Modal zum Ändern der Personennamen (Person 1 &amp; 2)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <!-- Utility layer -->
+  <div class="boundary">
+    <div class="boundary-label">Utilities &amp; Konfiguration (src/)</div>
+    <div class="grid-4">
+      <div class="node-db">
+        <div class="node-icon">📐</div>
+        <div class="node-type">Utility</div>
+        <div class="node-tech">calculations.ts</div>
+        <div class="node-name">Berechnungen</div>
+        <div class="node-desc">calculateBalance(), totalExpenses(), expensesThisMonth(), formatCurrency()</div>
+      </div>
+      <div class="node-db">
+        <div class="node-icon">📄</div>
+        <div class="node-type">Utility</div>
+        <div class="node-tech">utils/generatePDF.ts</div>
+        <div class="node-name">PDF-Generator</div>
+        <div class="node-desc">jsPDF + autoTable: Kassensturz-Abrechnung als PDF-Download</div>
+      </div>
+      <div class="node-component" style="background:#fef9c3;border-color:#ca8a04">
+        <div class="node-icon">🔑</div>
+        <div class="node-type">Konfiguration</div>
+        <div class="node-tech">supabaseClient.ts</div>
+        <div class="node-name">Supabase Client</div>
+        <div class="node-desc">createClient() mit VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY aus .env</div>
+      </div>
+      <div class="node-component" style="background:#fef9c3;border-color:#ca8a04">
+        <div class="node-icon">🗂️</div>
+        <div class="node-type">Konfiguration</div>
+        <div class="node-tech">constants.ts · types.ts</div>
+        <div class="node-name">Typen &amp; Konstanten</div>
+        <div class="node-desc">Expense, Settings, Kassensturz, ShoppingItem, CATEGORIES[], DEFAULT_SETTINGS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data flow -->
+  <div class="flow-box">
+    <h4>📊 Typischer Datenfluss: „Ausgabe hinzufügen"</h4>
+    <div class="flow-step"><div class="flow-num">1</div><div class="flow-text"><strong>AddExpenseForm</strong> validiert Eingabe → ruft <span class="code">onAdd(expense)</span> auf</div></div>
+    <div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><strong>useStore.addExpense()</strong> – optimistisch: <span class="code">setExpenses([neu, ...prev])</span> → sofortige UI-Aktualisierung</div></div>
+    <div class="flow-step"><div class="flow-num">3</div><div class="flow-text"><strong>supabaseClient</strong> – async: <span class="code">supabase.from('expenses').insert({...})</span> → HTTP POST an REST API</div></div>
+    <div class="flow-step"><div class="flow-num">4</div><div class="flow-text"><strong>PostgreSQL</strong> speichert den Eintrag → <strong>Realtime-Event</strong> wird ausgelöst</div></div>
+    <div class="flow-step"><div class="flow-num">5</div><div class="flow-text"><strong>Zweiter Client (Lisa)</strong> empfängt WebSocket-Push → <span class="code">fetchExpenses()</span> → UI-Update auf Lisas Handy</div></div>
+    <div class="flow-step"><div class="flow-num">6</div><div class="flow-text">Bei Fehler: Rollback (<span class="code">setExpenses(prev.filter(...))</span>) + opError-Banner</div></div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     LEVEL 4 – DATENMODELL (bonus)
+     ════════════════════════════════════════ -->
+<p class="level-title">Bonus – Datenbankschema (Supabase)</p>
+<p class="level-desc">Vier Tabellen mit Row Level Security (anon-Zugriff, keine Authentifizierung).</p>
+
+<div class="diagram">
+  <div class="grid-4">
+    <div class="node-db" style="width:auto">
+      <div class="node-icon">💸</div>
+      <div class="node-type">Tabelle</div>
+      <div class="node-name">expenses</div>
+      <div class="node-desc" style="text-align:left;margin-top:6px">
+        <code>id</code> uuid PK<br/>
+        <code>description</code> text<br/>
+        <code>amount</code> numeric(10,2)<br/>
+        <code>category_id</code> text<br/>
+        <code>paid_by</code> text (person1|2)<br/>
+        <code>split_ratio</code> numeric(5,4)<br/>
+        <code>date</code> date<br/>
+        <code>receipt_image</code> text (base64)<br/>
+        <code>notes</code> text<br/>
+        <code>created_at</code> timestamptz
+      </div>
+    </div>
+    <div class="node-db" style="width:auto">
+      <div class="node-icon">⚙️</div>
+      <div class="node-type">Tabelle (Singleton)</div>
+      <div class="node-name">settings</div>
+      <div class="node-desc" style="text-align:left;margin-top:6px">
+        <code>id</code> smallint PK (=1)<br/>
+        <code>person1_name</code> text<br/>
+        <code>person2_name</code> text<br/>
+        <br/>
+        Immer genau 1 Zeile.<br/>
+        CHECK (id = 1)
+      </div>
+    </div>
+    <div class="node-db" style="width:auto">
+      <div class="node-icon">📦</div>
+      <div class="node-type">Tabelle</div>
+      <div class="node-name">kassensturz</div>
+      <div class="node-desc" style="text-align:left;margin-top:6px">
+        <code>id</code> uuid PK<br/>
+        <code>created_at</code> timestamptz<br/>
+        <br/>
+        Trennmarke zwischen aktiven und archivierten Ausgaben.<br/>
+        Kein FK – Zeitstempel-basierte Logik.
+      </div>
+    </div>
+    <div class="node-db" style="width:auto">
+      <div class="node-icon">🛒</div>
+      <div class="node-type">Tabelle</div>
+      <div class="node-name">shopping_items</div>
+      <div class="node-desc" style="text-align:left;margin-top:6px">
+        <code>id</code> uuid PK<br/>
+        <code>text</code> text<br/>
+        <code>checked</code> boolean<br/>
+        <code>created_at</code> timestamptz<br/>
+        <br/>
+        Unabhängig von Expenses. Vollständiger CRUD + Realtime.
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;padding:12px 16px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;font-size:12px;color:#78350f">
+    <strong>🔐 Sicherheitsmodell:</strong> Alle Tabellen haben Row Level Security aktiviert. Policies erlauben dem <code>anon</code>-Role (öffentlicher Supabase-Key) SELECT, INSERT, UPDATE und DELETE – <em>ohne</em> Benutzerauthentifizierung. Das Zugriffskontrollmodell setzt auf Geheimhaltung der App-URL, nicht auf echte Authentifizierung.
+  </div>
+</div>
+
+</body>
+</html>

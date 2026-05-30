@@ -44,7 +44,7 @@ export function ExpenseList({ expenses, settings, onDelete }: Props) {
         <button
           onClick={() => setFilterCategory('all')}
           className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-            filterCategory === 'all' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'
+            filterCategory === 'all' ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-600'
           }`}
         >
           Alle
@@ -54,7 +54,7 @@ export function ExpenseList({ expenses, settings, onDelete }: Props) {
             key={cat.id}
             onClick={() => setFilterCategory(filterCategory === cat.id ? 'all' : cat.id)}
             className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-              filterCategory === cat.id ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'
+              filterCategory === cat.id ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
             <span>{cat.icon}</span>
@@ -68,7 +68,7 @@ export function ExpenseList({ expenses, settings, onDelete }: Props) {
         <select
           value={filterMonth}
           onChange={e => setFilterMonth(e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white"
         >
           <option value="all">Alle Monate</option>
           {months.map(m => {
@@ -80,7 +80,7 @@ export function ExpenseList({ expenses, settings, onDelete }: Props) {
       )}
 
       {/* Summary bar */}
-      <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex justify-between items-center">
+      <div className="bg-slate-100 border border-slate-200 rounded-xl p-3 flex justify-between items-center">
         <span className="text-sm text-gray-500">{filtered.length} {filtered.length === 1 ? 'Ausgabe' : 'Ausgaben'}</span>
         <span className="font-semibold text-gray-800">{formatCurrency(totalExpenses(filtered))}</span>
       </div>

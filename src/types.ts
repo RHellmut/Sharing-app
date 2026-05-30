@@ -1,13 +1,15 @@
 export type PersonId = 'person1' | 'person2';
 
 export type CategoryId =
-  | 'lebensmittel'
-  | 'haushalt'
-  | 'restaurant'
-  | 'freizeit'
-  | 'transport'
-  | 'gesundheit'
+  | 'koofland'
+  | 'aldi'
+  | 'netto'
+  | 'denns'
+  | 'edeka'
+  | 'rewe'
+  | 'dm'
   | 'sonstiges'
+  | 'urlaub'
   | 'ausgleich';
 
 export interface Expense {
@@ -27,4 +29,37 @@ export interface Expense {
 export interface Settings {
   person1Name: string;
   person2Name: string;
+}
+
+export interface Kassensturz {
+  id: string;
+  createdAt: string; // ISO datetime
+}
+
+export interface KassensturzPeriodData {
+  kassensturz: Kassensturz;
+  prevCreatedAt: string | null;
+  expenses: Expense[];
+}
+
+export interface ShoppingItem {
+  id: string;
+  text: string;
+  checked: boolean;
+  createdAt: string;
+}
+
+export interface FixkostenAmounts {
+  person1Amount: number;
+  person2Amount: number;
+}
+
+export interface VertragsEntry {
+  key: string;
+  anbieter: string;
+  vertragsbeginn: string | null;
+  vertragsende: string | null;
+  gekuendigt: boolean;
+  neuerAnbieter: string;
+  laeuftAb: string | null;
 }

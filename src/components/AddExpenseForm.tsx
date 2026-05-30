@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Camera, X } from 'lucide-react';
 import { Expense, PersonId, CategoryId, Settings } from '../types';
 import { USER_CATEGORIES } from '../constants';
+import { CategoryIcon } from './CategoryIcon';
 
 interface Props {
   settings: Settings;
@@ -38,7 +39,7 @@ function compressImage(file: File): Promise<string> {
 export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [categoryId, setCategoryId] = useState<CategoryId>('lebensmittel');
+  const [categoryId, setCategoryId] = useState<CategoryId>('sonstiges');
   const [paidBy, setPaidBy] = useState<PersonId>('person1');
   const [splitMode, setSplitMode] = useState<'half' | 'custom'>('half');
   const [p1Split, setP1Split] = useState(50);
@@ -95,7 +96,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
           value={description}
           onChange={e => setDescription(e.target.value)}
           placeholder="z.B. Wocheneinkauf Rewe"
-          className={`w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.description ? 'border-red-400' : 'border-gray-200'}`}
+          className={`w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-500 ${errors.description ? 'border-red-400' : 'border-gray-200'}`}
         />
         {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
       </div>
@@ -106,14 +107,12 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
         <div className="relative">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium select-none">€</span>
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
             value={amount}
             onChange={e => setAmount(e.target.value)}
             placeholder="0,00"
-            min="0"
-            step="0.01"
-            className={`w-full border rounded-xl pl-9 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.amount ? 'border-red-400' : 'border-gray-200'}`}
+            className={`w-full border rounded-xl pl-9 pr-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-slate-500 ${errors.amount ? 'border-red-400' : 'border-gray-200'}`}
           />
         </div>
         {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
@@ -130,11 +129,11 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
               onClick={() => setCategoryId(cat.id)}
               className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 transition-all ${
                 categoryId === cat.id
-                  ? 'border-emerald-500 bg-emerald-50'
+                  ? 'border-slate-600 bg-slate-100'
                   : 'border-gray-100 bg-gray-50 hover:border-gray-200'
               }`}
             >
-              <span className="text-xl leading-none">{cat.icon}</span>
+              <CategoryIcon cat={cat} imgClassName="w-7 h-7" />
               <span className="text-[10px] text-gray-600 leading-tight text-center">{cat.label}</span>
             </button>
           ))}
@@ -152,7 +151,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
               onClick={() => setPaidBy(p)}
               className={`flex-1 py-3 rounded-xl font-medium transition-all border-2 ${
                 paidBy === p
-                  ? 'bg-emerald-500 text-white border-emerald-500'
+                  ? 'bg-slate-700 text-white border-slate-700'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
               }`}
             >
@@ -173,7 +172,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
               onClick={() => setSplitMode(mode)}
               className={`flex-1 py-2.5 rounded-xl font-medium transition-all border-2 ${
                 splitMode === mode
-                  ? 'bg-emerald-500 text-white border-emerald-500'
+                  ? 'bg-slate-700 text-white border-slate-700'
                   : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
               }`}
             >
@@ -195,7 +194,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
                 max="100"
                 value={p1Split}
                 onChange={e => setP1Split(Math.min(100, Math.max(0, +e.target.value)))}
-                className="w-14 text-center border border-gray-200 rounded-lg py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-14 text-center border border-gray-200 rounded-lg py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
               />
               <input
                 type="range"
@@ -203,7 +202,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
                 max="100"
                 value={p1Split}
                 onChange={e => setP1Split(+e.target.value)}
-                className="flex-1 accent-emerald-500"
+                className="flex-1 accent-slate-700"
               />
               <input
                 type="number"
@@ -211,16 +210,16 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
                 max="100"
                 value={100 - p1Split}
                 onChange={e => setP1Split(100 - Math.min(100, Math.max(0, +e.target.value)))}
-                className="w-14 text-center border border-gray-200 rounded-lg py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-14 text-center border border-gray-200 rounded-lg py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
               />
             </div>
             <div className="h-2 rounded-full overflow-hidden flex">
-              <div className="bg-emerald-400 h-full transition-all" style={{ width: `${p1Split}%` }} />
+              <div className="bg-slate-600 h-full transition-all" style={{ width: `${p1Split}%` }} />
               <div className="bg-blue-400 flex-1 h-full" />
             </div>
             <div className="flex gap-3 text-xs text-gray-500">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                <span className="w-2 h-2 rounded-full bg-slate-600 inline-block" />
                 {settings.person1Name}
               </span>
               <span className="flex items-center gap-1">
@@ -235,12 +234,17 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
       {/* Date */}
       <div>
         <label className="text-sm font-medium text-gray-600 block mb-1.5">Datum</label>
-        <input
-          type="date"
-          value={date}
-          onChange={e => setDate(e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-        />
+        <div className="relative">
+          <div className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white text-gray-800 text-base select-none pointer-events-none">
+            {new Date(date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </div>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+        </div>
       </div>
 
       {/* Receipt */}
@@ -262,7 +266,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={imgLoading}
-            className="w-full border-2 border-dashed border-gray-200 rounded-xl py-7 flex flex-col items-center gap-2 text-gray-400 hover:border-emerald-300 hover:text-emerald-500 transition-colors"
+            className="w-full border-2 border-dashed border-gray-200 rounded-xl py-7 flex flex-col items-center gap-2 text-gray-400 hover:border-slate-400 hover:text-slate-500 transition-colors"
           >
             <Camera size={24} />
             <span className="text-sm">{imgLoading ? 'Wird geladen…' : 'Foto aufnehmen oder auswählen'}</span>
@@ -286,7 +290,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
           onChange={e => setNotes(e.target.value)}
           placeholder="Weitere Informationen…"
           rows={2}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-500 resize-none"
         />
       </div>
 
@@ -294,7 +298,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
       <button
         type="button"
         onClick={handleSubmit}
-        className="w-full bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-xl py-4 font-semibold text-lg transition-colors shadow-md"
+        className="w-full bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white rounded-xl py-4 font-semibold text-lg transition-colors shadow-md"
       >
         Ausgabe hinzufügen
       </button>
