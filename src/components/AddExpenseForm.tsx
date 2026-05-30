@@ -107,14 +107,12 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
         <div className="relative">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium select-none">€</span>
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
             value={amount}
             onChange={e => setAmount(e.target.value)}
             placeholder="0,00"
-            min="0"
-            step="0.01"
-            className={`w-full border rounded-xl pl-9 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-500 ${errors.amount ? 'border-red-400' : 'border-gray-200'}`}
+            className={`w-full border rounded-xl pl-9 pr-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-slate-500 ${errors.amount ? 'border-red-400' : 'border-gray-200'}`}
           />
         </div>
         {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}

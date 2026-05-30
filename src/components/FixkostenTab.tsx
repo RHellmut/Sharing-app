@@ -94,10 +94,8 @@ export function FixkostenTab({ fixkosten, settings, onUpdate }: Props) {
                       €
                     </span>
                     <input
-                      type="number"
+                      type="text"
                       inputMode="decimal"
-                      min="0"
-                      step="0.01"
                       value={draft[key][p]}
                       onChange={e =>
                         setDraft(prev => ({
