@@ -179,6 +179,27 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
   // ── Shared form ──
   const iCls = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400';
 
+  // Time input: white background, hh:mm overlay when empty
+  const TimeInput = ({ label, value, onChange: onChg }: { label: string; value: string; onChange: (v: string) => void }) => (
+    <div className="flex-1">
+      <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">{label}</p>
+      <div className="relative border border-gray-200 rounded-xl bg-white overflow-hidden focus-within:ring-2 focus-within:ring-slate-400 focus-within:border-slate-400">
+        {!value && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-white rounded-xl">
+            <span className="text-sm text-gray-400 font-mono tracking-widest">hh:mm</span>
+          </div>
+        )}
+        <input
+          type="time"
+          value={value}
+          onChange={e => onChg(e.target.value)}
+          className="w-full px-3 py-2.5 bg-white focus:outline-none"
+          style={{ fontSize: '16px', colorScheme: 'light' }}
+        />
+      </div>
+    </div>
+  );
+
   const EventForm = ({ form, startDate, onChange, onSave, onCancel, heading, showDelete, onDelete }:
     { form: FormState | EditState; startDate: string; onChange: (f: FormState | EditState) => void;
       onSave: () => void; onCancel: () => void; heading: string;
@@ -232,16 +253,8 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
         </div>
       ) : (
         <div className="flex gap-2">
-          <div className="flex-1">
-            <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Von</p>
-            <input type="time" value={form.timeStart} onChange={e => onChange({ ...form, timeStart: e.target.value })}
-              className={iCls} style={{ fontSize: '16px' }} />
-          </div>
-          <div className="flex-1">
-            <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Bis</p>
-            <input type="time" value={form.timeEnd} onChange={e => onChange({ ...form, timeEnd: e.target.value })}
-              className={iCls} style={{ fontSize: '16px' }} />
-          </div>
+          <TimeInput label="Von" value={form.timeStart} onChange={v => onChange({ ...form, timeStart: v })} />
+          <TimeInput label="Bis" value={form.timeEnd}   onChange={v => onChange({ ...form, timeEnd: v })} />
         </div>
       )}
 
