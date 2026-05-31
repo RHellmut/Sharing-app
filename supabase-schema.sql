@@ -137,6 +137,22 @@ create policy "anon_select_visited" on public.visited_countries for select to an
 create policy "anon_insert_visited" on public.visited_countries for insert to anon with check (true);
 create policy "anon_delete_visited" on public.visited_countries for delete to anon using (true);
 
+-- Kalender-Tabelle
+create table if not exists public.calendar_events (
+  id         uuid        primary key default gen_random_uuid(),
+  title      text        not null,
+  date       date        not null,
+  person     text        not null check (person in ('person1', 'person2')),
+  notes      text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.calendar_events enable row level security;
+
+create policy "anon_select_calendar" on public.calendar_events for select to anon using (true);
+create policy "anon_insert_calendar" on public.calendar_events for insert to anon with check (true);
+create policy "anon_delete_calendar" on public.calendar_events for delete to anon using (true);
+
 -- Realtime aktivieren (Sofort-Sync zwischen den Handys)
 alter publication supabase_realtime add table public.expenses;
 alter publication supabase_realtime add table public.settings;
@@ -145,3 +161,4 @@ alter publication supabase_realtime add table public.shopping_items;
 alter publication supabase_realtime add table public.fixkosten;
 alter publication supabase_realtime add table public.vertraege;
 alter publication supabase_realtime add table public.visited_countries;
+alter publication supabase_realtime add table public.calendar_events;

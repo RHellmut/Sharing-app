@@ -1,5 +1,5 @@
 import React, { useState, lazy, Suspense } from 'react';
-import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart, Landmark, Globe } from 'lucide-react';
+import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart, Landmark, Globe, CalendarDays } from 'lucide-react';
 import { useStore } from './storage';
 import { BalanceCard } from './components/BalanceCard';
 import { AddExpenseForm } from './components/AddExpenseForm';
@@ -7,6 +7,7 @@ import { ExpenseList } from './components/ExpenseList';
 import { KassensturzPeriod } from './components/KassensturzPeriod';
 import { ShoppingList } from './components/ShoppingList';
 import { FixkostenTab } from './components/FixkostenTab';
+import { CalendarTab } from './components/CalendarTab';
 import { SettingsModal } from './components/SettingsModal';
 
 const WorldTravel = lazy(() =>
@@ -16,7 +17,7 @@ import { expensesThisMonth, totalExpenses, formatCurrency } from './calculations
 import { CATEGORIES } from './constants';
 import { CategoryIcon } from './components/CategoryIcon';
 
-type Tab = 'overview' | 'add' | 'history' | 'shopping' | 'fixkosten';
+type Tab = 'overview' | 'add' | 'history' | 'shopping' | 'fixkosten' | 'calendar';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -51,6 +52,9 @@ export default function App() {
     updateVertrag,
     visitedCountries,
     toggleVisitedCountry,
+    calendarEvents,
+    addCalendarEvent,
+    deleteCalendarEvent,
   } = useStore();
 
   const thisMonth = expensesThisMonth(activeExpenses);
@@ -320,6 +324,16 @@ export default function App() {
             onUpdateVertrag={updateVertrag}
           />
         )}
+
+        {/* ── Kalender ── */}
+        {tab === 'calendar' && (
+          <CalendarTab
+            events={calendarEvents}
+            settings={settings}
+            onAdd={addCalendarEvent}
+            onDelete={deleteCalendarEvent}
+          />
+        )}
       </main>
 
       {/* ── Bottom Nav ── */}
@@ -378,6 +392,16 @@ export default function App() {
         >
           <Landmark size={20} />
           <span className="text-[10px]">Fixkosten</span>
+        </button>
+
+        <button
+          onClick={() => setTab('calendar')}
+          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors ${
+            tab === 'calendar' ? 'text-slate-700' : 'text-gray-400'
+          }`}
+        >
+          <CalendarDays size={20} />
+          <span className="text-[10px]">Kalender</span>
         </button>
       </nav>
 

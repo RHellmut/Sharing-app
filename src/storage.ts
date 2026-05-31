@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Expense, Settings, Kassensturz, KassensturzPeriodData, ShoppingItem, FixkostenAmounts, VertragsEntry } from './types';
+import { Expense, Settings, Kassensturz, KassensturzPeriodData, ShoppingItem, FixkostenAmounts, VertragsEntry, CalendarEvent } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 import { supabase } from './supabaseClient';
 
@@ -44,6 +44,7 @@ export interface StoreResult {
   fixkosten:            Record<string, FixkostenAmounts>;
   vertraege:            Record<string, VertragsEntry>;
   visitedCountries:     Set<string>;
+  calendarEvents:       CalendarEvent[];
   settings:             Settings;
   loading:              boolean;
   error:                string | null;
@@ -61,6 +62,8 @@ export interface StoreResult {
   updateFixkosten:      (key: string, person: 'person1' | 'person2', amount: number) => void;
   updateVertrag:        (key: string, field: string, value: string | boolean) => void;
   toggleVisitedCountry: (code: string) => void;
+  addCalendarEvent:     (event: CalendarEvent) => void;
+  deleteCalendarEvent:  (id: string) => void;
 }
 
 export function useStore(): StoreResult {
@@ -70,6 +73,7 @@ export function useStore(): StoreResult {
   const [fixkosten, setFixkosten] = useState<Record<string, FixkostenAmounts>>({});
   const [vertraege, setVertraege] = useState<Record<string, VertragsEntry>>({});
   const [visitedCountries, setVisitedCountries] = useState<Set<string>>(new Set());
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -181,9 +185,23 @@ export function useStore(): StoreResult {
       setVisitedCountries(new Set((data ?? []).map(r => r.country_code as string)));
     };
 
+    const fetchCalendarEvents = async () => {
+      const { data } = await supabase
+        .from('calendar_events').select('*').order('date', { ascending: true });
+      if (!mounted) return;
+      setCalendarEvents((data ?? []).map(r => ({
+        id:        r.id as string,
+        title:     r.title as string,
+        date:      (r.date as string).slice(0, 10),
+        person:    r.person as 'person1' | 'person2',
+        notes:     (r.notes as string | null) ?? undefined,
+        createdAt: r.created_at as string,
+      })));
+    };
+
     void Promise.all([
       fetchExpenses(), fetchSettings(), fetchKassensturz(), fetchShoppingItems(),
-      fetchFixkosten(), fetchVertraege(), fetchVisitedCountries(),
+      fetchFixkosten(), fetchVertraege(), fetchVisitedCountries(), fetchCalendarEvents(),
     ]).finally(() => { if (mounted) setLoading(false); });
 
     const channel = supabase
@@ -195,6 +213,7 @@ export function useStore(): StoreResult {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fixkosten' }, fetchFixkosten)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vertraege' }, fetchVertraege)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visited_countries' }, fetchVisitedCountries)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, fetchCalendarEvents)
       .subscribe();
 
     const poll = setInterval(() => {
@@ -220,6 +239,7 @@ export function useStore(): StoreResult {
     fixkosten,
     vertraege,
     visitedCountries,
+    calendarEvents,
     settings,
     loading,
     error,
@@ -484,6 +504,48 @@ export function useStore(): StoreResult {
           const msg = err instanceof Error ? err.message : String(err);
           setFixkosten(snapshot);
           setOpError(`Netzwerkfehler beim Speichern der Fixkosten. (${msg})`);
+        }
+      })();
+    },
+
+    addCalendarEvent(event: CalendarEvent) {
+      setCalendarEvents(prev => [...prev, event].sort((a, b) => a.date.localeCompare(b.date)));
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('calendar_events').insert({
+            id:         event.id,
+            title:      event.title,
+            date:       event.date,
+            person:     event.person,
+            notes:      event.notes ?? null,
+            created_at: event.createdAt,
+          });
+          if (err) {
+            setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
+            setOpError(`Termin konnte nicht gespeichert werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
+          setOpError(`Netzwerkfehler beim Speichern des Termins. (${msg})`);
+        }
+      })();
+    },
+
+    deleteCalendarEvent(id: string) {
+      const snapshot = calendarEvents;
+      setCalendarEvents(prev => prev.filter(e => e.id !== id));
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('calendar_events').delete().eq('id', id);
+          if (err) {
+            setCalendarEvents(snapshot);
+            setOpError(`Termin konnte nicht gelöscht werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setCalendarEvents(snapshot);
+          setOpError(`Netzwerkfehler beim Löschen des Termins. (${msg})`);
         }
       })();
     },

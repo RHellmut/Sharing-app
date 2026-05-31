@@ -63,3 +63,12 @@ export interface VertragsEntry {
   neuerAnbieter: string;
   laeuftAb: string | null;
 }
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string;      // YYYY-MM-DD
+  person: PersonId;
+  notes?: string;
+  createdAt: string;
+}
