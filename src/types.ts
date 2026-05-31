@@ -67,8 +67,9 @@ export interface VertragsEntry {
 export interface CalendarEvent {
   id: string;
   title: string;
-  date: string;      // YYYY-MM-DD
-  time?: string;     // HH:MM (optional)
+  date: string;          // YYYY-MM-DD
+  timeStart?: string;    // HH:MM
+  timeEnd?: string;      // HH:MM
   person: PersonId;
   notes?: string;
   createdAt: string;

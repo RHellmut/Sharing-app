@@ -1,75 +1,94 @@
-import React, { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2, X, Check, Pencil } from 'lucide-react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Pencil, Clock, CalendarDays } from 'lucide-react';
 import { CalendarEvent, Settings } from '../types';
 
-const MONTH_NAMES = [
-  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
-];
-const DOW = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+// ─── Constants ────────────────────────────────────────────────
+const HOUR_H   = 56;   // px per hour in timeline
+const LABEL_W  = 44;   // px for time label column
 
-const P1_COLOR  = 'bg-green-500';
-const P2_COLOR  = 'bg-violet-500';
-const P1_LIGHT  = 'bg-green-50 border-green-200';
-const P2_LIGHT  = 'bg-violet-50 border-violet-200';
-const P1_BADGE  = 'bg-green-500 text-white';
-const P2_BADGE  = 'bg-violet-500 text-white';
-const P1_BTN    = 'bg-green-500 hover:bg-green-600 text-white';
-const P2_BTN    = 'bg-violet-500 hover:bg-violet-600 text-white';
+const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const DOW_SHORT   = ['Mo','Di','Mi','Do','Fr','Sa','So'];
 
+const P1_DOT   = 'bg-green-500';
+const P2_DOT   = 'bg-violet-500';
+const P1_BTN   = 'bg-green-500 hover:bg-green-600 text-white';
+const P2_BTN   = 'bg-violet-500 hover:bg-violet-600 text-white';
+const P1_BADGE = 'bg-green-500 text-white';
+const P2_BADGE = 'bg-violet-500 text-white';
+const P1_BLOCK = 'border-l-[3px] border-green-500 bg-green-50 text-green-900';
+const P2_BLOCK = 'border-l-[3px] border-violet-500 bg-violet-50 text-violet-900';
+
+// ─── Helpers ──────────────────────────────────────────────────
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function makeId()   { return crypto.randomUUID(); }
 
-interface EditState {
-  id: string;
-  title: string;
-  time: string;
-  person: 'person1' | 'person2';
-  notes: string;
+function addDays(s: string, n: number): string {
+  const d = new Date(s + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
+function getMonday(s: string): string {
+  const d = new Date(s + 'T00:00:00');
+  const dow = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - dow);
+  return d.toISOString().slice(0, 10);
+}
+
+function toMin(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+function toPx(t: string): number { return toMin(t) / 60 * HOUR_H; }
+function durPx(start: string, end?: string): number {
+  const s = toMin(start);
+  const e = end ? toMin(end) : s + 60;
+  return Math.max(HOUR_H * 0.5, (e - s) / 60 * HOUR_H);
+}
+
+// ─── Form types ───────────────────────────────────────────────
+interface FormState {
+  title: string;
+  person: 'person1' | 'person2';
+  timeStart: string;
+  timeEnd: string;
+  notes: string;
+}
+interface EditState extends FormState { id: string }
+const emptyForm = (): FormState => ({ title: '', person: 'person1', timeStart: '', timeEnd: '', notes: '' });
+
+// ─── Props ────────────────────────────────────────────────────
 interface Props {
   events: CalendarEvent[];
   settings: Settings;
-  onAdd:    (event: CalendarEvent) => void;
+  onAdd:    (e: CalendarEvent) => void;
   onDelete: (id: string) => void;
-  onUpdate: (event: CalendarEvent) => void;
+  onUpdate: (e: CalendarEvent) => void;
 }
 
+// ─── Component ────────────────────────────────────────────────
 export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Props) {
   const now = new Date();
-  const [year, setYear]   = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth());
-  const [selected, setSelected] = useState<string | null>(null);
 
-  // Add form
-  const [showForm,   setShowForm]   = useState(false);
-  const [formTitle,  setFormTitle]  = useState('');
-  const [formPerson, setFormPerson] = useState<'person1' | 'person2'>('person1');
-  const [formTime,   setFormTime]   = useState('');
-  const [formNotes,  setFormNotes]  = useState('');
+  const [view, setView]     = useState<'month' | 'day'>('month');
+  const [dayDate, setDay]   = useState(todayStr());
+  const [year, setYear]     = useState(now.getFullYear());
+  const [month, setMonth]   = useState(now.getMonth());
 
-  // Edit form
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState<FormState>(emptyForm());
   const [editing, setEditing] = useState<EditState | null>(null);
 
-  const prevMonth = () => {
-    setSelected(null);
-    if (month === 0) { setYear(y => y - 1); setMonth(11); }
-    else setMonth(m => m - 1);
-  };
-  const nextMonth = () => {
-    setSelected(null);
-    if (month === 11) { setYear(y => y + 1); setMonth(0); }
-    else setMonth(m => m + 1);
-  };
+  const timelineRef = useRef<HTMLDivElement>(null);
 
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDow    = (new Date(year, month, 1).getDay() + 6) % 7;
-
-  const cells: (number | null)[] = [
-    ...Array(firstDow).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
+  // Scroll timeline to 7:00 when day view opens
+  useEffect(() => {
+    if (view === 'day') {
+      setTimeout(() => {
+        timelineRef.current?.scrollTo({ top: 7 * HOUR_H, behavior: 'smooth' });
+      }, 80);
+    }
+  }, [view, dayDate]);
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
@@ -77,277 +96,298 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
       if (!map.has(e.date)) map.set(e.date, []);
       map.get(e.date)!.push(e);
     }
-    // Sort each day's events by time
-    for (const [, arr] of map) {
-      arr.sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''));
-    }
     return map;
   }, [events]);
 
-  const fmtDate = (day: number) =>
-    `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  // ── Month helpers ──
+  const today      = todayStr();
+  const daysInMon  = new Date(year, month + 1, 0).getDate();
+  const firstDow   = (new Date(year, month, 1).getDay() + 6) % 7;
+  const cells      = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMon }, (_, i) => i + 1)] as (number | null)[];
+  const fmtDate    = (d: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const prevMon    = () => { if (month === 0) { setYear(y => y-1); setMonth(11); } else setMonth(m => m-1); };
+  const nextMon    = () => { if (month === 11) { setYear(y => y+1); setMonth(0); } else setMonth(m => m+1); };
 
-  const today    = todayStr();
-  const selEvts  = selected ? (eventsByDate.get(selected) ?? []) : [];
+  // ── Day helpers ──
+  const monday    = getMonday(dayDate);
+  const weekDays  = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const dayEvts   = eventsByDate.get(dayDate) ?? [];
+  const timedEvts = [...dayEvts].filter(e => e.timeStart).sort((a, b) => a.timeStart!.localeCompare(b.timeStart!));
+  const allDayEvts = dayEvts.filter(e => !e.timeStart);
 
+  const dayLabel = (() => {
+    const d = new Date(dayDate + 'T00:00:00');
+    return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  })();
+
+  // ── Form actions ──
   const submitAdd = () => {
-    if (!formTitle.trim() || !selected) return;
-    onAdd({
-      id:        makeId(),
-      title:     formTitle.trim(),
-      date:      selected,
-      time:      formTime || undefined,
-      person:    formPerson,
-      notes:     formNotes.trim() || undefined,
-      createdAt: new Date().toISOString(),
-    });
-    setFormTitle(''); setFormNotes(''); setFormTime('');
-    setShowForm(false);
-  };
-
-  const startEdit = (evt: CalendarEvent) => {
-    setEditing({ id: evt.id, title: evt.title, time: evt.time ?? '', person: evt.person, notes: evt.notes ?? '' });
-    setShowForm(false);
+    if (!addForm.title.trim()) return;
+    onAdd({ id: makeId(), title: addForm.title.trim(), date: dayDate,
+      timeStart: addForm.timeStart || undefined, timeEnd: addForm.timeEnd || undefined,
+      person: addForm.person, notes: addForm.notes.trim() || undefined,
+      createdAt: new Date().toISOString() });
+    setAddForm(emptyForm()); setShowAdd(false);
   };
 
   const submitEdit = () => {
-    if (!editing || !editing.title.trim()) return;
-    const original = events.find(e => e.id === editing.id);
-    if (!original) return;
-    onUpdate({ ...original, title: editing.title.trim(), time: editing.time || undefined, person: editing.person, notes: editing.notes.trim() || undefined });
+    if (!editing?.title.trim()) return;
+    const orig = events.find(e => e.id === editing.id);
+    if (!orig) return;
+    onUpdate({ ...orig, title: editing.title.trim(),
+      timeStart: editing.timeStart || undefined, timeEnd: editing.timeEnd || undefined,
+      person: editing.person, notes: editing.notes.trim() || undefined });
     setEditing(null);
   };
 
-  const formatDisplayDate = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+  const startEdit = (evt: CalendarEvent) => {
+    setEditing({ id: evt.id, title: evt.title, person: evt.person,
+      timeStart: evt.timeStart ?? '', timeEnd: evt.timeEnd ?? '', notes: evt.notes ?? '' });
+    setShowAdd(false);
   };
 
-  const inputBase = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400';
+  // ── Shared form renderer ──
+  const iCls = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400';
 
-  return (
-    <div className="px-3 pt-4 pb-6">
-
-      {/* ── Month navigation ── */}
-      <div className="flex items-center justify-between mb-3">
-        <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
-          <ChevronLeft size={20} />
-        </button>
-        <h2 className="text-base font-semibold text-gray-800">{MONTH_NAMES[month]} {year}</h2>
-        <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
-          <ChevronRight size={20} />
-        </button>
-      </div>
-
-      {/* ── Day-of-week header ── */}
-      <div className="grid grid-cols-7 mb-1">
-        {DOW.map(d => (
-          <div key={d} className="text-center text-[10px] font-medium text-gray-400 py-1">{d}</div>
+  const EventForm = ({ form, onChange, onSave, onCancel, heading, showDelete, onDelete }:
+    { form: FormState | EditState; onChange: (f: FormState | EditState) => void;
+      onSave: () => void; onCancel: () => void; heading: string;
+      showDelete?: boolean; onDelete?: () => void }) => (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+      <p className="text-sm font-semibold text-gray-700">{heading}</p>
+      <div className="flex gap-2">
+        {(['person1', 'person2'] as const).map(p => (
+          <button key={p} onClick={() => onChange({ ...form, person: p })}
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+              form.person === p ? (p === 'person1' ? P1_BTN : P2_BTN) : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+            {p === 'person1' ? settings.person1Name : settings.person2Name}
+          </button>
         ))}
       </div>
+      <input type="text" value={form.title} onChange={e => onChange({ ...form, title: e.target.value })}
+        placeholder="Titel" className={iCls} style={{ fontSize: '16px' }} autoFocus />
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Von</p>
+          <input type="time" value={form.timeStart} onChange={e => onChange({ ...form, timeStart: e.target.value })}
+            className={iCls} style={{ fontSize: '16px' }} />
+        </div>
+        <div className="flex-1">
+          <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Bis</p>
+          <input type="time" value={form.timeEnd} onChange={e => onChange({ ...form, timeEnd: e.target.value })}
+            className={iCls} style={{ fontSize: '16px' }} />
+        </div>
+      </div>
+      <input type="text" value={form.notes} onChange={e => onChange({ ...form, notes: e.target.value })}
+        placeholder="Notiz (optional)" className={iCls} style={{ fontSize: '16px' }} />
+      <div className="flex gap-2">
+        {showDelete && (
+          <button onClick={onDelete}
+            className="px-3 py-2.5 rounded-xl text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-1">
+            <Trash2 size={14} />
+          </button>
+        )}
+        <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+          Abbrechen
+        </button>
+        <button onClick={onSave} disabled={!form.title.trim()}
+          className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-800 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5">
+          <Check size={15} /> Speichern
+        </button>
+      </div>
+    </div>
+  );
 
-      {/* ── Calendar grid ── */}
-      <div className="grid grid-cols-7 gap-y-1">
-        {cells.map((day, i) => {
-          if (day === null) return <div key={`e-${i}`} />;
-          const dateStr  = fmtDate(day);
-          const dayEvts  = eventsByDate.get(dateStr) ?? [];
-          const isToday  = dateStr === today;
-          const isSel    = dateStr === selected;
-          const hasP1    = dayEvts.some(e => e.person === 'person1');
-          const hasP2    = dayEvts.some(e => e.person === 'person2');
+  // ══════════════════════════════════════════════
+  //  MONTH VIEW
+  // ══════════════════════════════════════════════
+  if (view === 'month') {
+    return (
+      <div className="px-3 pt-4 pb-6">
+        <div className="flex items-center justify-between mb-3">
+          <button onClick={prevMon} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500"><ChevronLeft size={20} /></button>
+          <h2 className="text-base font-semibold text-gray-800">{MONTH_NAMES[month]} {year}</h2>
+          <button onClick={nextMon} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500"><ChevronRight size={20} /></button>
+        </div>
+        <div className="grid grid-cols-7 mb-1">
+          {DOW_SHORT.map(d => <div key={d} className="text-center text-[10px] font-medium text-gray-400 py-1">{d}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-y-1">
+          {cells.map((day, i) => {
+            if (!day) return <div key={`e${i}`} />;
+            const ds   = fmtDate(day);
+            const evts = eventsByDate.get(ds) ?? [];
+            const isTd = ds === today;
+            return (
+              <button key={ds} onClick={() => { setDay(ds); setView('day'); setShowAdd(false); setEditing(null); }}
+                className={`flex flex-col items-center rounded-xl py-1 transition-colors ${isTd ? 'bg-slate-700' : 'hover:bg-gray-100'}`}>
+                <span className={`text-sm font-medium leading-tight ${isTd ? 'text-white' : 'text-gray-700'}`}>{day}</span>
+                <div className="flex gap-0.5 mt-0.5 h-2 items-center">
+                  {evts.some(e => e.person === 'person1') && <span className={`w-1.5 h-1.5 rounded-full ${P1_DOT}`} />}
+                  {evts.some(e => e.person === 'person2') && <span className={`w-1.5 h-1.5 rounded-full ${P2_DOT}`} />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-6 flex items-center gap-4 justify-center">
+          <div className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${P1_DOT}`} /><span className="text-xs text-gray-500">{settings.person1Name}</span></div>
+          <div className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${P2_DOT}`} /><span className="text-xs text-gray-500">{settings.person2Name}</span></div>
+        </div>
+      </div>
+    );
+  }
 
-          return (
-            <button
-              key={dateStr}
-              onClick={() => { setSelected(isSel ? null : dateStr); setShowForm(false); setEditing(null); }}
-              className={`flex flex-col items-center rounded-xl py-1 transition-colors ${
-                isSel ? 'bg-slate-700' : isToday ? 'bg-slate-100' : 'hover:bg-gray-100'
-              }`}
-            >
-              <span className={`text-sm font-medium leading-tight ${
-                isSel ? 'text-white' : isToday ? 'text-slate-700' : 'text-gray-700'
-              }`}>{day}</span>
-              <div className="flex gap-0.5 mt-0.5 h-2 items-center">
-                {hasP1 && <span className={`w-1.5 h-1.5 rounded-full ${P1_COLOR}`} />}
-                {hasP2 && <span className={`w-1.5 h-1.5 rounded-full ${P2_COLOR}`} />}
-              </div>
-            </button>
-          );
-        })}
+  // ══════════════════════════════════════════════
+  //  DAY VIEW
+  // ══════════════════════════════════════════════
+  return (
+    <div className="flex flex-col" style={{ height: 'calc(100dvh - 168px)' }}>
+
+      {/* ── Week strip ── */}
+      <div className="px-3 pt-3 pb-2 bg-white border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={() => { setDay(d => addDays(d, -7)); }}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"><ChevronLeft size={18} /></button>
+          <button onClick={() => { setView('month'); setShowAdd(false); setEditing(null); }}
+            className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:bg-gray-100 px-3 py-1.5 rounded-xl transition-colors">
+            <CalendarDays size={15} />
+            {MONTH_NAMES[new Date(dayDate + 'T00:00:00').getMonth()]} {new Date(dayDate + 'T00:00:00').getFullYear()}
+          </button>
+          <button onClick={() => { setDay(d => addDays(d, 7)); }}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"><ChevronRight size={18} /></button>
+        </div>
+        <div className="grid grid-cols-7 gap-0.5">
+          {weekDays.map((d, i) => {
+            const isSel = d === dayDate;
+            const isTd  = d === today;
+            const dayN  = new Date(d + 'T00:00:00').getDate();
+            const evts  = eventsByDate.get(d) ?? [];
+            return (
+              <button key={d} onClick={() => { setDay(d); setShowAdd(false); setEditing(null); }}
+                className={`flex flex-col items-center py-1.5 rounded-xl transition-colors ${isSel ? 'bg-slate-700' : isTd ? 'bg-slate-100' : 'hover:bg-gray-100'}`}>
+                <span className={`text-[9px] font-medium ${isSel ? 'text-slate-300' : 'text-gray-400'}`}>{DOW_SHORT[i]}</span>
+                <span className={`text-sm font-semibold mt-0.5 ${isSel ? 'text-white' : isTd ? 'text-slate-700' : 'text-gray-700'}`}>{dayN}</span>
+                <div className="flex gap-0.5 mt-0.5 h-1.5 items-center">
+                  {evts.some(e => e.person === 'person1') && <span className={`w-1 h-1 rounded-full ${P1_DOT}`} />}
+                  {evts.some(e => e.person === 'person2') && <span className={`w-1 h-1 rounded-full ${P2_DOT}`} />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* ── Selected day panel ── */}
-      {selected && (
-        <div className="mt-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-gray-700">{formatDisplayDate(selected)}</p>
-            <button onClick={() => { setSelected(null); setShowForm(false); setEditing(null); }}
-              className="p-1 rounded-lg hover:bg-gray-100 text-gray-400">
-              <X size={16} />
-            </button>
-          </div>
+      {/* ── Day title bar ── */}
+      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100 flex-shrink-0">
+        <p className="text-xs font-semibold text-gray-600 truncate">{dayLabel}</p>
+        <button onClick={() => { setShowAdd(s => !s); setEditing(null); }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 text-white text-xs font-medium rounded-xl hover:bg-slate-800 transition-colors flex-shrink-0">
+          <Plus size={13} /> Eintrag
+        </button>
+      </div>
 
-          {/* Event list */}
-          {selEvts.length > 0 && (
-            <div className="space-y-2">
-              {selEvts.map(evt => {
-                const isP1  = evt.person === 'person1';
-                const name  = isP1 ? settings.person1Name : settings.person2Name;
-                const light = isP1 ? P1_LIGHT : P2_LIGHT;
-                const badge = isP1 ? P1_BADGE : P2_BADGE;
-
-                // ── Edit mode ──
-                if (editing?.id === evt.id) {
-                  return (
-                    <div key={evt.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3 space-y-2">
-                      {/* Person selector */}
-                      <div className="flex gap-2">
-                        <button onClick={() => setEditing(s => s && ({ ...s, person: 'person1' }))}
-                          className={`flex-1 py-1.5 rounded-xl text-sm font-medium transition-colors ${
-                            editing.person === 'person1' ? P1_BTN : 'bg-gray-100 text-gray-500'}`}>
-                          {settings.person1Name}
-                        </button>
-                        <button onClick={() => setEditing(s => s && ({ ...s, person: 'person2' }))}
-                          className={`flex-1 py-1.5 rounded-xl text-sm font-medium transition-colors ${
-                            editing.person === 'person2' ? P2_BTN : 'bg-gray-100 text-gray-500'}`}>
-                          {settings.person2Name}
-                        </button>
-                      </div>
-                      {/* Title */}
-                      <input type="text" value={editing.title}
-                        onChange={e => setEditing(s => s && ({ ...s, title: e.target.value }))}
-                        placeholder="Titel"
-                        className={inputBase}
-                        style={{ fontSize: '16px' }}
-                        autoFocus
-                      />
-                      {/* Time + Notes row */}
-                      <div className="flex gap-2">
-                        <input type="time" value={editing.time}
-                          onChange={e => setEditing(s => s && ({ ...s, time: e.target.value }))}
-                          className="border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400 w-32"
-                          style={{ fontSize: '16px' }}
-                        />
-                        <input type="text" value={editing.notes}
-                          onChange={e => setEditing(s => s && ({ ...s, notes: e.target.value }))}
-                          placeholder="Notiz (optional)"
-                          className={`${inputBase} flex-1`}
-                          style={{ fontSize: '16px' }}
-                        />
-                      </div>
-                      {/* Buttons */}
-                      <div className="flex gap-2">
-                        <button onClick={() => setEditing(null)}
-                          className="flex-1 py-2 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-                          Abbrechen
-                        </button>
-                        <button onClick={submitEdit} disabled={!editing.title.trim()}
-                          className="flex-1 py-2 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-800 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5">
-                          <Check size={14} /> Speichern
-                        </button>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // ── Display mode ──
-                return (
-                  <div key={evt.id} className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 ${light}`}>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap mt-0.5 flex-shrink-0 ${badge}`}>
-                      {name}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 leading-snug">{evt.title}</p>
-                      <div className="flex flex-wrap gap-x-2 mt-0.5">
-                        {evt.time && (
-                          <span className="text-xs font-medium text-gray-500">{evt.time} Uhr</span>
-                        )}
-                        {evt.notes && (
-                          <span className="text-xs text-gray-400">{evt.notes}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button onClick={() => startEdit(evt)}
-                        className="p-1 rounded-lg hover:bg-black/10 text-gray-400 hover:text-gray-600 transition-colors">
-                        <Pencil size={13} />
-                      </button>
-                      <button onClick={() => onDelete(evt.id)}
-                        className="p-1 rounded-lg hover:bg-black/10 text-gray-400 hover:text-red-500 transition-colors">
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+      {/* ── Add / Edit form ── */}
+      {(showAdd || editing) && (
+        <div className="px-3 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+          {showAdd && (
+            <EventForm form={addForm} onChange={f => setAddForm(f as FormState)}
+              onSave={submitAdd} onCancel={() => { setShowAdd(false); setAddForm(emptyForm()); }}
+              heading="Neuer Eintrag" />
           )}
-
-          {selEvts.length === 0 && !showForm && (
-            <p className="text-xs text-gray-400 text-center py-2">Noch keine Einträge für diesen Tag.</p>
-          )}
-
-          {/* Add form */}
-          {showForm ? (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
-              <p className="text-sm font-semibold text-gray-700">Neuer Eintrag</p>
-              {/* Person selector */}
-              <div className="flex gap-2">
-                <button onClick={() => setFormPerson('person1')}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-                    formPerson === 'person1' ? P1_BTN : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                  {settings.person1Name}
-                </button>
-                <button onClick={() => setFormPerson('person2')}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-                    formPerson === 'person2' ? P2_BTN : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                  {settings.person2Name}
-                </button>
-              </div>
-              {/* Title */}
-              <input type="text" value={formTitle} onChange={e => setFormTitle(e.target.value)}
-                placeholder="Titel" className={inputBase} style={{ fontSize: '16px' }} autoFocus />
-              {/* Time + Notes row */}
-              <div className="flex gap-2">
-                <input type="time" value={formTime} onChange={e => setFormTime(e.target.value)}
-                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400 w-32"
-                  style={{ fontSize: '16px' }}
-                />
-                <input type="text" value={formNotes} onChange={e => setFormNotes(e.target.value)}
-                  placeholder="Notiz (optional)"
-                  className={`${inputBase} flex-1`} style={{ fontSize: '16px' }} />
-              </div>
-              {/* Buttons */}
-              <div className="flex gap-2">
-                <button onClick={() => { setShowForm(false); setFormTitle(''); setFormNotes(''); setFormTime(''); }}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-                  Abbrechen
-                </button>
-                <button onClick={submitAdd} disabled={!formTitle.trim()}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-800 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5">
-                  <Check size={15} /> Speichern
-                </button>
-              </div>
-            </div>
-          ) : !editing && (
-            <button onClick={() => setShowForm(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-slate-400 hover:text-slate-600 transition-colors">
-              <Plus size={16} /> Eintrag hinzufügen
-            </button>
+          {editing && (
+            <EventForm form={editing} onChange={f => setEditing(f as EditState)}
+              onSave={submitEdit} onCancel={() => setEditing(null)}
+              heading="Eintrag bearbeiten" showDelete
+              onDelete={() => { onDelete(editing.id); setEditing(null); }} />
           )}
         </div>
       )}
 
-      {/* ── Legend ── */}
-      <div className="mt-6 flex items-center gap-4 justify-center">
-        <div className="flex items-center gap-1.5">
-          <span className={`w-2.5 h-2.5 rounded-full ${P1_COLOR}`} />
-          <span className="text-xs text-gray-500">{settings.person1Name}</span>
+      {/* ── All-day events ── */}
+      {allDayEvts.length > 0 && (
+        <div className="px-3 py-2 border-b border-gray-100 bg-white flex-shrink-0">
+          <p className="text-[10px] font-medium text-gray-400 mb-1.5">Ganztags</p>
+          <div className="space-y-1">
+            {allDayEvts.map(evt => {
+              const isP1 = evt.person === 'person1';
+              const badge = isP1 ? P1_BADGE : P2_BADGE;
+              const name  = isP1 ? settings.person1Name : settings.person2Name;
+              return (
+                <button key={evt.id} onClick={() => startEdit(evt)}
+                  className={`w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors ${isP1 ? 'bg-green-50 border border-green-200 hover:bg-green-100' : 'bg-violet-50 border border-violet-200 hover:bg-violet-100'} ${editing?.id === evt.id ? 'ring-2 ring-slate-400' : ''}`}>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${badge}`}>{name}</span>
+                  <p className="flex-1 text-sm font-medium text-gray-800 truncate">{evt.title}</p>
+                  <Pencil size={12} className="text-gray-400 flex-shrink-0" />
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className={`w-2.5 h-2.5 rounded-full ${P2_COLOR}`} />
-          <span className="text-xs text-gray-500">{settings.person2Name}</span>
+      )}
+
+      {/* ── Timeline ── */}
+      <div ref={timelineRef} className="flex-1 overflow-y-auto bg-white">
+        <div className="relative" style={{ height: `${24 * HOUR_H}px` }}>
+
+          {/* Hour lines + labels */}
+          {Array.from({ length: 24 }, (_, h) => (
+            <div key={h} className="absolute left-0 right-0 flex items-start pointer-events-none"
+              style={{ top: h * HOUR_H }}>
+              <span className="text-[10px] text-gray-400 flex-shrink-0 -mt-[9px] select-none text-right pr-2"
+                style={{ width: LABEL_W }}>
+                {`${String(h).padStart(2, '0')}:00`}
+              </span>
+              <div className="flex-1 border-t border-gray-100" />
+            </div>
+          ))}
+
+          {/* Current time indicator */}
+          {dayDate === today && (() => {
+            const n = new Date();
+            const px = (n.getHours() + n.getMinutes() / 60) * HOUR_H;
+            return (
+              <div className="absolute flex items-center pointer-events-none"
+                style={{ top: px, left: LABEL_W - 4, right: 0, zIndex: 10 }}>
+                <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                <div className="flex-1 h-px bg-red-400" />
+              </div>
+            );
+          })()}
+
+          {/* Timed events: P1 = left half, P2 = right half */}
+          {timedEvts.map(evt => {
+            const isP1   = evt.person === 'person1';
+            const top    = toPx(evt.timeStart!);
+            const height = Math.max(durPx(evt.timeStart!, evt.timeEnd), 28);
+            const blk    = isP1 ? P1_BLOCK : P2_BLOCK;
+            const time   = evt.timeStart + (evt.timeEnd ? ` – ${evt.timeEnd}` : '');
+            const isEdit = editing?.id === evt.id;
+
+            return (
+              <button key={evt.id}
+                onClick={() => startEdit(evt)}
+                className={`absolute rounded-md px-1.5 py-1 overflow-hidden text-left transition-opacity ${blk} ${isEdit ? 'ring-2 ring-slate-500 opacity-60' : 'hover:brightness-95'}`}
+                style={{
+                  top: top + 1,
+                  height: height - 2,
+                  left: isP1 ? `${LABEL_W + 2}px` : 'calc(50% + 1px)',
+                  right: isP1 ? 'calc(50% + 1px)' : '2px',
+                  zIndex: 4,
+                  minWidth: 24,
+                }}>
+                <p className="text-[11px] font-semibold leading-tight truncate">{evt.title}</p>
+                {height >= 32 && (
+                  <p className="text-[10px] leading-tight flex items-center gap-0.5 opacity-75 mt-0.5">
+                    <Clock size={8} />{time}
+                  </p>
+                )}
+                {evt.notes && height >= 48 && (
+                  <p className="text-[10px] opacity-60 truncate mt-0.5">{evt.notes}</p>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
