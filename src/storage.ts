@@ -193,7 +193,8 @@ export function useStore(): StoreResult {
       setCalendarEvents((data ?? []).map(r => ({
         id:        r.id as string,
         title:     r.title as string,
-        date:      (r.date as string).slice(0, 10),
+        date:      (r.date     as string).slice(0, 10),
+        dateEnd:   (r.date_end as string | null) ? (r.date_end as string).slice(0, 10) : undefined,
         timeStart: (r.time_start as string | null) ?? undefined,
         timeEnd:   (r.time_end   as string | null) ?? undefined,
         person:    r.person as 'person1' | 'person2',
@@ -519,6 +520,7 @@ export function useStore(): StoreResult {
             id:         event.id,
             title:      event.title,
             date:       event.date,
+            date_end:   event.dateEnd   ?? null,
             time_start: event.timeStart ?? null,
             time_end:   event.timeEnd   ?? null,
             person:     event.person,
@@ -566,6 +568,7 @@ export function useStore(): StoreResult {
           const { error: err } = await supabase.from('calendar_events').update({
             title:      event.title,
             date:       event.date,
+            date_end:   event.dateEnd   ?? null,
             time_start: event.timeStart ?? null,
             time_end:   event.timeEnd   ?? null,
             person:     event.person,

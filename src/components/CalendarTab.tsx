@@ -3,8 +3,8 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Pencil, Clock, Calendar
 import { CalendarEvent, Settings } from '../types';
 
 // ─── Constants ────────────────────────────────────────────────
-const HOUR_H   = 56;   // px per hour in timeline
-const LABEL_W  = 44;   // px for time label column
+const HOUR_H  = 56;
+const LABEL_W = 44;
 
 const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 const DOW_SHORT   = ['Mo','Di','Mi','Do','Fr','Sa','So'];
@@ -18,21 +18,24 @@ const P2_BADGE = 'bg-violet-500 text-white';
 const P1_BLOCK = 'border-l-[3px] border-green-500 bg-green-50 text-green-900';
 const P2_BLOCK = 'border-l-[3px] border-violet-500 bg-violet-50 text-violet-900';
 
-// ─── Helpers ──────────────────────────────────────────────────
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+// ─── Date helpers (timezone-safe) ─────────────────────────────
+function localStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function todayStr() { return localStr(new Date()); }
 function makeId()   { return crypto.randomUUID(); }
 
 function addDays(s: string, n: number): string {
   const d = new Date(s + 'T00:00:00');
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return localStr(d);
 }
 
 function getMonday(s: string): string {
   const d = new Date(s + 'T00:00:00');
-  const dow = (d.getDay() + 6) % 7;
+  const dow = (d.getDay() + 6) % 7; // Mon=0
   d.setDate(d.getDate() - dow);
-  return d.toISOString().slice(0, 10);
+  return localStr(d);
 }
 
 function toMin(t: string): number {
@@ -46,16 +49,23 @@ function durPx(start: string, end?: string): number {
   return Math.max(HOUR_H * 0.5, (e - s) / 60 * HOUR_H);
 }
 
+function fmtShortDate(s: string): string {
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+}
+
 // ─── Form types ───────────────────────────────────────────────
 interface FormState {
-  title: string;
-  person: 'person1' | 'person2';
+  title:     string;
+  person:    'person1' | 'person2';
+  multiDay:  boolean;
+  dateEnd:   string;
   timeStart: string;
-  timeEnd: string;
-  notes: string;
+  timeEnd:   string;
+  notes:     string;
 }
 interface EditState extends FormState { id: string }
-const emptyForm = (): FormState => ({ title: '', person: 'person1', timeStart: '', timeEnd: '', notes: '' });
+const emptyForm = (): FormState => ({ title: '', person: 'person1', multiDay: false, dateEnd: '', timeStart: '', timeEnd: '', notes: '' });
 
 // ─── Props ────────────────────────────────────────────────────
 interface Props {
@@ -70,10 +80,10 @@ interface Props {
 export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Props) {
   const now = new Date();
 
-  const [view, setView]     = useState<'month' | 'day'>('month');
-  const [dayDate, setDay]   = useState(todayStr());
-  const [year, setYear]     = useState(now.getFullYear());
-  const [month, setMonth]   = useState(now.getMonth());
+  const [view, setView]   = useState<'month' | 'day'>('month');
+  const [dayDate, setDay] = useState(todayStr());
+  const [year, setYear]   = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState<FormState>(emptyForm());
@@ -81,7 +91,6 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
 
   const timelineRef = useRef<HTMLDivElement>(null);
 
-  // Scroll timeline to 7:00 when day view opens
   useEffect(() => {
     if (view === 'day') {
       setTimeout(() => {
@@ -90,30 +99,37 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
     }
   }, [view, dayDate]);
 
+  // Build eventsByDate — multi-day events appear on every covered day
   const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const e of events) {
-      if (!map.has(e.date)) map.set(e.date, []);
-      map.get(e.date)!.push(e);
+      const end = e.dateEnd ?? e.date;
+      let cur = e.date;
+      let guard = 0;
+      while (cur <= end && guard++ < 366) {
+        if (!map.has(cur)) map.set(cur, []);
+        map.get(cur)!.push(e);
+        cur = addDays(cur, 1);
+      }
     }
     return map;
   }, [events]);
 
   // ── Month helpers ──
-  const today      = todayStr();
-  const daysInMon  = new Date(year, month + 1, 0).getDate();
-  const firstDow   = (new Date(year, month, 1).getDay() + 6) % 7;
-  const cells      = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMon }, (_, i) => i + 1)] as (number | null)[];
-  const fmtDate    = (d: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  const prevMon    = () => { if (month === 0) { setYear(y => y-1); setMonth(11); } else setMonth(m => m-1); };
-  const nextMon    = () => { if (month === 11) { setYear(y => y+1); setMonth(0); } else setMonth(m => m+1); };
+  const today     = todayStr();
+  const daysInMon = new Date(year, month + 1, 0).getDate();
+  const firstDow  = (new Date(year, month, 1).getDay() + 6) % 7;
+  const cells     = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMon }, (_, i) => i + 1)] as (number | null)[];
+  const fmtDate   = (d: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const prevMon   = () => { if (month === 0) { setYear(y => y-1); setMonth(11); } else setMonth(m => m-1); };
+  const nextMon   = () => { if (month === 11) { setYear(y => y+1); setMonth(0); } else setMonth(m => m+1); };
 
   // ── Day helpers ──
   const monday    = getMonday(dayDate);
   const weekDays  = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   const dayEvts   = eventsByDate.get(dayDate) ?? [];
-  const timedEvts = [...dayEvts].filter(e => e.timeStart).sort((a, b) => a.timeStart!.localeCompare(b.timeStart!));
-  const allDayEvts = dayEvts.filter(e => !e.timeStart);
+  const timedEvts = [...dayEvts].filter(e => e.timeStart && !e.dateEnd).sort((a, b) => a.timeStart!.localeCompare(b.timeStart!));
+  const allDayEvts = dayEvts.filter(e => !e.timeStart || e.dateEnd);
 
   const dayLabel = (() => {
     const d = new Date(dayDate + 'T00:00:00');
@@ -123,10 +139,14 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
   // ── Form actions ──
   const submitAdd = () => {
     if (!addForm.title.trim()) return;
-    onAdd({ id: makeId(), title: addForm.title.trim(), date: dayDate,
-      timeStart: addForm.timeStart || undefined, timeEnd: addForm.timeEnd || undefined,
+    onAdd({
+      id: makeId(), title: addForm.title.trim(), date: dayDate,
+      dateEnd:   addForm.multiDay && addForm.dateEnd > dayDate ? addForm.dateEnd : undefined,
+      timeStart: !addForm.multiDay && addForm.timeStart ? addForm.timeStart : undefined,
+      timeEnd:   !addForm.multiDay && addForm.timeEnd   ? addForm.timeEnd   : undefined,
       person: addForm.person, notes: addForm.notes.trim() || undefined,
-      createdAt: new Date().toISOString() });
+      createdAt: new Date().toISOString(),
+    });
     setAddForm(emptyForm()); setShowAdd(false);
   };
 
@@ -134,27 +154,39 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
     if (!editing?.title.trim()) return;
     const orig = events.find(e => e.id === editing.id);
     if (!orig) return;
-    onUpdate({ ...orig, title: editing.title.trim(),
-      timeStart: editing.timeStart || undefined, timeEnd: editing.timeEnd || undefined,
-      person: editing.person, notes: editing.notes.trim() || undefined });
+    onUpdate({
+      ...orig, title: editing.title.trim(),
+      dateEnd:   editing.multiDay && editing.dateEnd > orig.date ? editing.dateEnd : undefined,
+      timeStart: !editing.multiDay && editing.timeStart ? editing.timeStart : undefined,
+      timeEnd:   !editing.multiDay && editing.timeEnd   ? editing.timeEnd   : undefined,
+      person: editing.person, notes: editing.notes.trim() || undefined,
+    });
     setEditing(null);
   };
 
   const startEdit = (evt: CalendarEvent) => {
-    setEditing({ id: evt.id, title: evt.title, person: evt.person,
-      timeStart: evt.timeStart ?? '', timeEnd: evt.timeEnd ?? '', notes: evt.notes ?? '' });
+    setEditing({
+      id: evt.id, title: evt.title, person: evt.person,
+      multiDay:  !!evt.dateEnd,
+      dateEnd:   evt.dateEnd   ?? '',
+      timeStart: evt.timeStart ?? '',
+      timeEnd:   evt.timeEnd   ?? '',
+      notes:     evt.notes     ?? '',
+    });
     setShowAdd(false);
   };
 
-  // ── Shared form renderer ──
+  // ── Shared form ──
   const iCls = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400';
 
-  const EventForm = ({ form, onChange, onSave, onCancel, heading, showDelete, onDelete }:
-    { form: FormState | EditState; onChange: (f: FormState | EditState) => void;
+  const EventForm = ({ form, startDate, onChange, onSave, onCancel, heading, showDelete, onDelete }:
+    { form: FormState | EditState; startDate: string; onChange: (f: FormState | EditState) => void;
       onSave: () => void; onCancel: () => void; heading: string;
       showDelete?: boolean; onDelete?: () => void }) => (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
       <p className="text-sm font-semibold text-gray-700">{heading}</p>
+
+      {/* Person */}
       <div className="flex gap-2">
         {(['person1', 'person2'] as const).map(p => (
           <button key={p} onClick={() => onChange({ ...form, person: p })}
@@ -164,33 +196,71 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
           </button>
         ))}
       </div>
+
+      {/* Title */}
       <input type="text" value={form.title} onChange={e => onChange({ ...form, title: e.target.value })}
         placeholder="Titel" className={iCls} style={{ fontSize: '16px' }} autoFocus />
+
+      {/* Type toggle: single / multi-day */}
       <div className="flex gap-2">
-        <div className="flex-1">
-          <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Von</p>
-          <input type="time" value={form.timeStart} onChange={e => onChange({ ...form, timeStart: e.target.value })}
-            className={iCls} style={{ fontSize: '16px' }} />
-        </div>
-        <div className="flex-1">
-          <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Bis</p>
-          <input type="time" value={form.timeEnd} onChange={e => onChange({ ...form, timeEnd: e.target.value })}
-            className={iCls} style={{ fontSize: '16px' }} />
-        </div>
+        <button onClick={() => onChange({ ...form, multiDay: false, dateEnd: '' })}
+          className={`flex-1 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+            !form.multiDay ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+          Einzelner Tag
+        </button>
+        <button onClick={() => onChange({ ...form, multiDay: true, timeStart: '', timeEnd: '' })}
+          className={`flex-1 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+            form.multiDay ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+          Mehrere Tage
+        </button>
       </div>
+
+      {/* Time or date range */}
+      {form.multiDay ? (
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Von</p>
+            <div className={`${iCls} bg-gray-50 text-gray-500 text-sm`}>{fmtShortDate(startDate)}</div>
+          </div>
+          <div className="flex-1">
+            <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Bis</p>
+            <input type="date" value={form.dateEnd}
+              min={addDays(startDate, 1)}
+              onChange={e => onChange({ ...form, dateEnd: e.target.value })}
+              className={iCls} style={{ fontSize: '16px' }} />
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Von</p>
+            <input type="time" value={form.timeStart} onChange={e => onChange({ ...form, timeStart: e.target.value })}
+              className={iCls} style={{ fontSize: '16px' }} />
+          </div>
+          <div className="flex-1">
+            <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Bis</p>
+            <input type="time" value={form.timeEnd} onChange={e => onChange({ ...form, timeEnd: e.target.value })}
+              className={iCls} style={{ fontSize: '16px' }} />
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
       <input type="text" value={form.notes} onChange={e => onChange({ ...form, notes: e.target.value })}
         placeholder="Notiz (optional)" className={iCls} style={{ fontSize: '16px' }} />
+
+      {/* Buttons */}
       <div className="flex gap-2">
         {showDelete && (
           <button onClick={onDelete}
-            className="px-3 py-2.5 rounded-xl text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-1">
+            className="px-3 py-2.5 rounded-xl text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center">
             <Trash2 size={14} />
           </button>
         )}
         <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
           Abbrechen
         </button>
-        <button onClick={onSave} disabled={!form.title.trim()}
+        <button onClick={onSave} disabled={!form.title.trim() || (form.multiDay && !form.dateEnd)}
           className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-800 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5">
           <Check size={15} /> Speichern
         </button>
@@ -218,19 +288,23 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
             const ds   = fmtDate(day);
             const evts = eventsByDate.get(ds) ?? [];
             const isTd = ds === today;
+            const hasP1 = evts.some(e => e.person === 'person1');
+            const hasP2 = evts.some(e => e.person === 'person2');
+            // Mark multi-day spans
+            const hasMulti = evts.some(e => e.dateEnd);
             return (
               <button key={ds} onClick={() => { setDay(ds); setView('day'); setShowAdd(false); setEditing(null); }}
                 className={`flex flex-col items-center rounded-xl py-1 transition-colors ${isTd ? 'bg-slate-700' : 'hover:bg-gray-100'}`}>
                 <span className={`text-sm font-medium leading-tight ${isTd ? 'text-white' : 'text-gray-700'}`}>{day}</span>
                 <div className="flex gap-0.5 mt-0.5 h-2 items-center">
-                  {evts.some(e => e.person === 'person1') && <span className={`w-1.5 h-1.5 rounded-full ${P1_DOT}`} />}
-                  {evts.some(e => e.person === 'person2') && <span className={`w-1.5 h-1.5 rounded-full ${P2_DOT}`} />}
+                  {hasP1 && <span className={`${hasMulti ? 'w-3 h-1.5 rounded-sm' : 'w-1.5 h-1.5 rounded-full'} ${P1_DOT}`} />}
+                  {hasP2 && <span className={`${hasMulti ? 'w-3 h-1.5 rounded-sm' : 'w-1.5 h-1.5 rounded-full'} ${P2_DOT}`} />}
                 </div>
               </button>
             );
           })}
         </div>
-        <div className="mt-6 flex items-center gap-4 justify-center">
+        <div className="mt-5 flex items-center gap-4 justify-center">
           <div className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${P1_DOT}`} /><span className="text-xs text-gray-500">{settings.person1Name}</span></div>
           <div className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${P2_DOT}`} /><span className="text-xs text-gray-500">{settings.person2Name}</span></div>
         </div>
@@ -247,14 +321,14 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
       {/* ── Week strip ── */}
       <div className="px-3 pt-3 pb-2 bg-white border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
-          <button onClick={() => { setDay(d => addDays(d, -7)); }}
+          <button onClick={() => setDay(d => addDays(d, -7))}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"><ChevronLeft size={18} /></button>
           <button onClick={() => { setView('month'); setShowAdd(false); setEditing(null); }}
             className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:bg-gray-100 px-3 py-1.5 rounded-xl transition-colors">
             <CalendarDays size={15} />
             {MONTH_NAMES[new Date(dayDate + 'T00:00:00').getMonth()]} {new Date(dayDate + 'T00:00:00').getFullYear()}
           </button>
-          <button onClick={() => { setDay(d => addDays(d, 7)); }}
+          <button onClick={() => setDay(d => addDays(d, 7))}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"><ChevronRight size={18} /></button>
         </div>
         <div className="grid grid-cols-7 gap-0.5">
@@ -282,42 +356,54 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
       <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100 flex-shrink-0">
         <p className="text-xs font-semibold text-gray-600 truncate">{dayLabel}</p>
         <button onClick={() => { setShowAdd(s => !s); setEditing(null); }}
-          className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 text-white text-xs font-medium rounded-xl hover:bg-slate-800 transition-colors flex-shrink-0">
+          className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 text-white text-xs font-medium rounded-xl hover:bg-slate-800 transition-colors flex-shrink-0 ml-2">
           <Plus size={13} /> Eintrag
         </button>
       </div>
 
       {/* ── Add / Edit form ── */}
       {(showAdd || editing) && (
-        <div className="px-3 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+        <div className="px-3 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0 overflow-y-auto" style={{ maxHeight: '55vh' }}>
           {showAdd && (
-            <EventForm form={addForm} onChange={f => setAddForm(f as FormState)}
-              onSave={submitAdd} onCancel={() => { setShowAdd(false); setAddForm(emptyForm()); }}
+            <EventForm form={addForm} startDate={dayDate}
+              onChange={f => setAddForm(f as FormState)}
+              onSave={submitAdd}
+              onCancel={() => { setShowAdd(false); setAddForm(emptyForm()); }}
               heading="Neuer Eintrag" />
           )}
           {editing && (
-            <EventForm form={editing} onChange={f => setEditing(f as EditState)}
-              onSave={submitEdit} onCancel={() => setEditing(null)}
+            <EventForm form={editing} startDate={events.find(e => e.id === editing.id)?.date ?? dayDate}
+              onChange={f => setEditing(f as EditState)}
+              onSave={submitEdit}
+              onCancel={() => setEditing(null)}
               heading="Eintrag bearbeiten" showDelete
               onDelete={() => { onDelete(editing.id); setEditing(null); }} />
           )}
         </div>
       )}
 
-      {/* ── All-day events ── */}
+      {/* ── All-day / multi-day events ── */}
       {allDayEvts.length > 0 && (
         <div className="px-3 py-2 border-b border-gray-100 bg-white flex-shrink-0">
           <p className="text-[10px] font-medium text-gray-400 mb-1.5">Ganztags</p>
           <div className="space-y-1">
             {allDayEvts.map(evt => {
-              const isP1 = evt.person === 'person1';
-              const badge = isP1 ? P1_BADGE : P2_BADGE;
-              const name  = isP1 ? settings.person1Name : settings.person2Name;
+              const isP1   = evt.person === 'person1';
+              const badge  = isP1 ? P1_BADGE : P2_BADGE;
+              const name   = isP1 ? settings.person1Name : settings.person2Name;
+              const isEdit = editing?.id === evt.id;
               return (
-                <button key={evt.id} onClick={() => startEdit(evt)}
-                  className={`w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors ${isP1 ? 'bg-green-50 border border-green-200 hover:bg-green-100' : 'bg-violet-50 border border-violet-200 hover:bg-violet-100'} ${editing?.id === evt.id ? 'ring-2 ring-slate-400' : ''}`}>
+                <button key={evt.id + dayDate} onClick={() => startEdit(evt)}
+                  className={`w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors ${
+                    isP1 ? 'bg-green-50 border border-green-200 hover:bg-green-100' : 'bg-violet-50 border border-violet-200 hover:bg-violet-100'
+                  } ${isEdit ? 'ring-2 ring-slate-400' : ''}`}>
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${badge}`}>{name}</span>
-                  <p className="flex-1 text-sm font-medium text-gray-800 truncate">{evt.title}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{evt.title}</p>
+                    {evt.dateEnd && (
+                      <p className="text-[10px] text-gray-400">{fmtShortDate(evt.date)} – {fmtShortDate(evt.dateEnd)}</p>
+                    )}
+                  </div>
                   <Pencil size={12} className="text-gray-400 flex-shrink-0" />
                 </button>
               );
@@ -330,7 +416,7 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
       <div ref={timelineRef} className="flex-1 overflow-y-auto bg-white">
         <div className="relative" style={{ height: `${24 * HOUR_H}px` }}>
 
-          {/* Hour lines + labels */}
+          {/* Hour lines */}
           {Array.from({ length: 24 }, (_, h) => (
             <div key={h} className="absolute left-0 right-0 flex items-start pointer-events-none"
               style={{ top: h * HOUR_H }}>
@@ -355,7 +441,7 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
             );
           })()}
 
-          {/* Timed events: P1 = left half, P2 = right half */}
+          {/* Timed events: P1 = left, P2 = right */}
           {timedEvts.map(evt => {
             const isP1   = evt.person === 'person1';
             const top    = toPx(evt.timeStart!);
@@ -369,12 +455,10 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
                 onClick={() => startEdit(evt)}
                 className={`absolute rounded-md px-1.5 py-1 overflow-hidden text-left transition-opacity ${blk} ${isEdit ? 'ring-2 ring-slate-500 opacity-60' : 'hover:brightness-95'}`}
                 style={{
-                  top: top + 1,
-                  height: height - 2,
+                  top: top + 1, height: height - 2,
                   left: isP1 ? `${LABEL_W + 2}px` : 'calc(50% + 1px)',
                   right: isP1 ? 'calc(50% + 1px)' : '2px',
-                  zIndex: 4,
-                  minWidth: 24,
+                  zIndex: 4, minWidth: 24,
                 }}>
                 <p className="text-[11px] font-semibold leading-tight truncate">{evt.title}</p>
                 {height >= 32 && (

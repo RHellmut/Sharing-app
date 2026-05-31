@@ -142,6 +142,7 @@ create table if not exists public.calendar_events (
   id         uuid        primary key default gen_random_uuid(),
   title      text        not null,
   date       date        not null,
+  date_end   date,
   time_start time,
   time_end   time,
   person     text        not null check (person in ('person1', 'person2')),
@@ -149,13 +150,14 @@ create table if not exists public.calendar_events (
   created_at timestamptz not null default now()
 );
 
--- Migration falls Tabelle mit alter Spalte 'time' bereits existiert:
+-- Migration für bestehende Tabellen:
 do $$ begin
   if exists (select 1 from information_schema.columns where table_name='calendar_events' and column_name='time') then
     alter table public.calendar_events rename column "time" to time_start;
   end if;
 end $$;
-alter table public.calendar_events add column if not exists time_end time;
+alter table public.calendar_events add column if not exists time_end  time;
+alter table public.calendar_events add column if not exists date_end  date;
 
 alter table public.calendar_events enable row level security;
 

@@ -67,7 +67,8 @@ export interface VertragsEntry {
 export interface CalendarEvent {
   id: string;
   title: string;
-  date: string;          // YYYY-MM-DD
+  date: string;          // YYYY-MM-DD (Startdatum)
+  dateEnd?: string;      // YYYY-MM-DD (Enddatum, nur bei mehrtägigen)
   timeStart?: string;    // HH:MM
   timeEnd?: string;      // HH:MM
   person: PersonId;
