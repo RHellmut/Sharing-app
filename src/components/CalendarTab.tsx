@@ -200,6 +200,28 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
     </div>
   );
 
+  // Date input: white background, dd.mm. overlay when empty
+  const DateInput = ({ label, value, min, onChange: onChg }: { label: string; value: string; min?: string; onChange: (v: string) => void }) => (
+    <div className="flex-1">
+      <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">{label}</p>
+      <div className="relative border border-gray-200 rounded-xl bg-white overflow-hidden focus-within:ring-2 focus-within:ring-slate-400 focus-within:border-slate-400">
+        {!value && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-white rounded-xl">
+            <span className="text-sm text-gray-400 font-mono tracking-widest">dd.mm.</span>
+          </div>
+        )}
+        <input
+          type="date"
+          value={value}
+          min={min}
+          onChange={e => onChg(e.target.value)}
+          className="w-full px-3 py-2.5 bg-white focus:outline-none"
+          style={{ fontSize: '16px', colorScheme: 'light' }}
+        />
+      </div>
+    </div>
+  );
+
   const EventForm = ({ form, startDate, onChange, onSave, onCancel, heading, showDelete, onDelete }:
     { form: FormState | EditState; startDate: string; onChange: (f: FormState | EditState) => void;
       onSave: () => void; onCancel: () => void; heading: string;
@@ -241,15 +263,10 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
         <div className="flex gap-2 items-end">
           <div className="flex-1">
             <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Von</p>
-            <div className={`${iCls} bg-gray-50 text-gray-500 text-sm`}>{fmtShortDate(startDate)}</div>
+            <div className={`${iCls} bg-white text-gray-700 text-sm`}>{fmtShortDate(startDate)}</div>
           </div>
-          <div className="flex-1">
-            <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Bis</p>
-            <input type="date" value={form.dateEnd}
-              min={addDays(startDate, 1)}
-              onChange={e => onChange({ ...form, dateEnd: e.target.value })}
-              className={iCls} style={{ fontSize: '16px' }} />
-          </div>
+          <DateInput label="Bis" value={form.dateEnd} min={addDays(startDate, 1)}
+            onChange={v => onChange({ ...form, dateEnd: v })} />
         </div>
       ) : (
         <div className="flex gap-2">
