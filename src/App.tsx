@@ -55,6 +55,7 @@ export default function App() {
     calendarEvents,
     addCalendarEvent,
     deleteCalendarEvent,
+    updateCalendarEvent,
   } = useStore();
 
   const thisMonth = expensesThisMonth(activeExpenses);
@@ -332,6 +333,7 @@ export default function App() {
             settings={settings}
             onAdd={addCalendarEvent}
             onDelete={deleteCalendarEvent}
+            onUpdate={updateCalendarEvent}
           />
         )}
       </main>

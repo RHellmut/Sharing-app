@@ -142,10 +142,14 @@ create table if not exists public.calendar_events (
   id         uuid        primary key default gen_random_uuid(),
   title      text        not null,
   date       date        not null,
+  time       time,
   person     text        not null check (person in ('person1', 'person2')),
   notes      text,
   created_at timestamptz not null default now()
 );
+
+-- Spalte nachrüsten falls Tabelle schon existiert:
+alter table public.calendar_events add column if not exists time time;
 
 alter table public.calendar_events enable row level security;
 
