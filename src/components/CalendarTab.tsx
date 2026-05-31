@@ -18,6 +18,8 @@ const P2_BADGE = 'bg-violet-500 text-white';
 const P1_BLOCK = 'border-l-[3px] border-green-500 bg-green-50 text-green-900';
 const P2_BLOCK = 'border-l-[3px] border-violet-500 bg-violet-50 text-violet-900';
 
+const iCls = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400';
+
 // ─── Date helpers (timezone-safe) ─────────────────────────────
 function localStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -76,111 +78,9 @@ interface Props {
   onUpdate: (e: CalendarEvent) => void;
 }
 
-// ─── Component ────────────────────────────────────────────────
-export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Props) {
-  const now = new Date();
-
-  const [view, setView]   = useState<'month' | 'day'>('month');
-  const [dayDate, setDay] = useState(todayStr());
-  const [year, setYear]   = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth());
-
-  const [showAdd, setShowAdd] = useState(false);
-  const [addForm, setAddForm] = useState<FormState>(emptyForm());
-  const [editing, setEditing] = useState<EditState | null>(null);
-
-  const timelineRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (view === 'day') {
-      setTimeout(() => {
-        timelineRef.current?.scrollTo({ top: 7 * HOUR_H, behavior: 'smooth' });
-      }, 80);
-    }
-  }, [view, dayDate]);
-
-  // Build eventsByDate — multi-day events appear on every covered day
-  const eventsByDate = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
-    for (const e of events) {
-      const end = e.dateEnd ?? e.date;
-      let cur = e.date;
-      let guard = 0;
-      while (cur <= end && guard++ < 366) {
-        if (!map.has(cur)) map.set(cur, []);
-        map.get(cur)!.push(e);
-        cur = addDays(cur, 1);
-      }
-    }
-    return map;
-  }, [events]);
-
-  // ── Month helpers ──
-  const today     = todayStr();
-  const daysInMon = new Date(year, month + 1, 0).getDate();
-  const firstDow  = (new Date(year, month, 1).getDay() + 6) % 7;
-  const cells     = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMon }, (_, i) => i + 1)] as (number | null)[];
-  const fmtDate   = (d: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  const prevMon   = () => { if (month === 0) { setYear(y => y-1); setMonth(11); } else setMonth(m => m-1); };
-  const nextMon   = () => { if (month === 11) { setYear(y => y+1); setMonth(0); } else setMonth(m => m+1); };
-
-  // ── Day helpers ──
-  const monday    = getMonday(dayDate);
-  const weekDays  = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
-  const dayEvts   = eventsByDate.get(dayDate) ?? [];
-  const timedEvts = [...dayEvts].filter(e => e.timeStart && !e.dateEnd).sort((a, b) => a.timeStart!.localeCompare(b.timeStart!));
-  const allDayEvts = dayEvts.filter(e => !e.timeStart || e.dateEnd);
-
-  const dayLabel = (() => {
-    const d = new Date(dayDate + 'T00:00:00');
-    return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  })();
-
-  // ── Form actions ──
-  const submitAdd = () => {
-    if (!addForm.title.trim()) return;
-    onAdd({
-      id: makeId(), title: addForm.title.trim(), date: dayDate,
-      dateEnd:   addForm.multiDay && addForm.dateEnd > dayDate ? addForm.dateEnd : undefined,
-      timeStart: !addForm.multiDay && addForm.timeStart ? addForm.timeStart : undefined,
-      timeEnd:   !addForm.multiDay && addForm.timeEnd   ? addForm.timeEnd   : undefined,
-      person: addForm.person, notes: addForm.notes.trim() || undefined,
-      createdAt: new Date().toISOString(),
-    });
-    setAddForm(emptyForm()); setShowAdd(false);
-  };
-
-  const submitEdit = () => {
-    if (!editing?.title.trim()) return;
-    const orig = events.find(e => e.id === editing.id);
-    if (!orig) return;
-    onUpdate({
-      ...orig, title: editing.title.trim(),
-      dateEnd:   editing.multiDay && editing.dateEnd > orig.date ? editing.dateEnd : undefined,
-      timeStart: !editing.multiDay && editing.timeStart ? editing.timeStart : undefined,
-      timeEnd:   !editing.multiDay && editing.timeEnd   ? editing.timeEnd   : undefined,
-      person: editing.person, notes: editing.notes.trim() || undefined,
-    });
-    setEditing(null);
-  };
-
-  const startEdit = (evt: CalendarEvent) => {
-    setEditing({
-      id: evt.id, title: evt.title, person: evt.person,
-      multiDay:  !!evt.dateEnd,
-      dateEnd:   evt.dateEnd   ?? '',
-      timeStart: evt.timeStart ?? '',
-      timeEnd:   evt.timeEnd   ?? '',
-      notes:     evt.notes     ?? '',
-    });
-    setShowAdd(false);
-  };
-
-  // ── Shared form ──
-  const iCls = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400';
-
-  // Time input: white background, hh:mm overlay when empty
-  const TimeInput = ({ label, value, onChange: onChg }: { label: string; value: string; onChange: (v: string) => void }) => (
+// ─── Stable sub-components (defined at module level to avoid remount) ─────────
+function TimeInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
     <div className="flex-1">
       <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">{label}</p>
       <div className="relative border border-gray-200 rounded-xl bg-white overflow-hidden focus-within:ring-2 focus-within:ring-slate-400 focus-within:border-slate-400">
@@ -192,16 +92,17 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
         <input
           type="time"
           value={value}
-          onChange={e => onChg(e.target.value)}
+          onChange={e => onChange(e.target.value)}
           className="w-full px-3 py-2.5 bg-white focus:outline-none"
           style={{ fontSize: '16px', colorScheme: 'light' }}
         />
       </div>
     </div>
   );
+}
 
-  // Date input: white background, dd.mm. overlay when empty
-  const DateInput = ({ label, value, min, onChange: onChg }: { label: string; value: string; min?: string; onChange: (v: string) => void }) => (
+function DateInput({ label, value, min, onChange }: { label: string; value: string; min?: string; onChange: (v: string) => void }) {
+  return (
     <div className="flex-1">
       <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">{label}</p>
       <div className="relative border border-gray-200 rounded-xl bg-white overflow-hidden focus-within:ring-2 focus-within:ring-slate-400 focus-within:border-slate-400">
@@ -214,18 +115,29 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
           type="date"
           value={value}
           min={min}
-          onChange={e => onChg(e.target.value)}
+          onChange={e => onChange(e.target.value)}
           className="w-full px-3 py-2.5 bg-white focus:outline-none"
           style={{ fontSize: '16px', colorScheme: 'light' }}
         />
       </div>
     </div>
   );
+}
 
-  const EventForm = ({ form, startDate, onChange, onSave, onCancel, heading, showDelete, onDelete }:
-    { form: FormState | EditState; startDate: string; onChange: (f: FormState | EditState) => void;
-      onSave: () => void; onCancel: () => void; heading: string;
-      showDelete?: boolean; onDelete?: () => void }) => (
+interface EventFormProps {
+  form:        FormState | EditState;
+  startDate:   string;
+  settings:    Settings;
+  heading:     string;
+  showDelete?: boolean;
+  onChange:    (f: FormState | EditState) => void;
+  onSave:      () => void;
+  onCancel:    () => void;
+  onDelete?:   () => void;
+}
+
+function EventForm({ form, startDate, settings, heading, showDelete, onChange, onSave, onCancel, onDelete }: EventFormProps) {
+  return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
       <p className="text-sm font-semibold text-gray-700">{heading}</p>
 
@@ -297,6 +209,107 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
       </div>
     </div>
   );
+}
+
+// ─── Main component ───────────────────────────────────────────
+export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Props) {
+  const now = new Date();
+
+  const [view, setView]   = useState<'month' | 'day'>('month');
+  const [dayDate, setDay] = useState(todayStr());
+  const [year, setYear]   = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState<FormState>(emptyForm());
+  const [editing, setEditing] = useState<EditState | null>(null);
+
+  const timelineRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (view === 'day') {
+      setTimeout(() => {
+        timelineRef.current?.scrollTo({ top: 7 * HOUR_H, behavior: 'smooth' });
+      }, 80);
+    }
+  }, [view, dayDate]);
+
+  // Build eventsByDate — multi-day events appear on every covered day
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const e of events) {
+      const end = e.dateEnd ?? e.date;
+      let cur = e.date;
+      let guard = 0;
+      while (cur <= end && guard++ < 366) {
+        if (!map.has(cur)) map.set(cur, []);
+        map.get(cur)!.push(e);
+        cur = addDays(cur, 1);
+      }
+    }
+    return map;
+  }, [events]);
+
+  // ── Month helpers ──
+  const today     = todayStr();
+  const daysInMon = new Date(year, month + 1, 0).getDate();
+  const firstDow  = (new Date(year, month, 1).getDay() + 6) % 7;
+  const cells     = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMon }, (_, i) => i + 1)] as (number | null)[];
+  const fmtDate   = (d: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const prevMon   = () => { if (month === 0) { setYear(y => y-1); setMonth(11); } else setMonth(m => m-1); };
+  const nextMon   = () => { if (month === 11) { setYear(y => y+1); setMonth(0); } else setMonth(m => m+1); };
+
+  // ── Day helpers ──
+  const monday     = getMonday(dayDate);
+  const weekDays   = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const dayEvts    = eventsByDate.get(dayDate) ?? [];
+  const timedEvts  = [...dayEvts].filter(e => e.timeStart && !e.dateEnd).sort((a, b) => a.timeStart!.localeCompare(b.timeStart!));
+  const allDayEvts = dayEvts.filter(e => !e.timeStart || e.dateEnd);
+
+  const dayLabel = (() => {
+    const d = new Date(dayDate + 'T00:00:00');
+    return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  })();
+
+  // ── Form actions ──
+  const submitAdd = () => {
+    if (!addForm.title.trim()) return;
+    onAdd({
+      id: makeId(), title: addForm.title.trim(), date: dayDate,
+      dateEnd:   addForm.multiDay && addForm.dateEnd > dayDate ? addForm.dateEnd : undefined,
+      timeStart: !addForm.multiDay && addForm.timeStart ? addForm.timeStart : undefined,
+      timeEnd:   !addForm.multiDay && addForm.timeEnd   ? addForm.timeEnd   : undefined,
+      person: addForm.person, notes: addForm.notes.trim() || undefined,
+      createdAt: new Date().toISOString(),
+    });
+    setAddForm(emptyForm()); setShowAdd(false);
+  };
+
+  const submitEdit = () => {
+    if (!editing?.title.trim()) return;
+    const orig = events.find(e => e.id === editing.id);
+    if (!orig) return;
+    onUpdate({
+      ...orig, title: editing.title.trim(),
+      dateEnd:   editing.multiDay && editing.dateEnd > orig.date ? editing.dateEnd : undefined,
+      timeStart: !editing.multiDay && editing.timeStart ? editing.timeStart : undefined,
+      timeEnd:   !editing.multiDay && editing.timeEnd   ? editing.timeEnd   : undefined,
+      person: editing.person, notes: editing.notes.trim() || undefined,
+    });
+    setEditing(null);
+  };
+
+  const startEdit = (evt: CalendarEvent) => {
+    setEditing({
+      id: evt.id, title: evt.title, person: evt.person,
+      multiDay:  !!evt.dateEnd,
+      dateEnd:   evt.dateEnd   ?? '',
+      timeStart: evt.timeStart ?? '',
+      timeEnd:   evt.timeEnd   ?? '',
+      notes:     evt.notes     ?? '',
+    });
+    setShowAdd(false);
+  };
 
   // ══════════════════════════════════════════════
   //  MONTH VIEW
@@ -320,7 +333,6 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
             const isTd = ds === today;
             const hasP1 = evts.some(e => e.person === 'person1');
             const hasP2 = evts.some(e => e.person === 'person2');
-            // Mark multi-day spans
             const hasMulti = evts.some(e => e.dateEnd);
             return (
               <button key={ds} onClick={() => { setDay(ds); setView('day'); setShowAdd(false); setEditing(null); }}
@@ -395,14 +407,14 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
       {(showAdd || editing) && (
         <div className="px-3 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0 overflow-y-auto" style={{ maxHeight: '55vh' }}>
           {showAdd && (
-            <EventForm form={addForm} startDate={dayDate}
+            <EventForm form={addForm} startDate={dayDate} settings={settings}
               onChange={f => setAddForm(f as FormState)}
               onSave={submitAdd}
               onCancel={() => { setShowAdd(false); setAddForm(emptyForm()); }}
               heading="Neuer Eintrag" />
           )}
           {editing && (
-            <EventForm form={editing} startDate={events.find(e => e.id === editing.id)?.date ?? dayDate}
+            <EventForm form={editing} startDate={events.find(e => e.id === editing.id)?.date ?? dayDate} settings={settings}
               onChange={f => setEditing(f as EditState)}
               onSave={submitEdit}
               onCancel={() => setEditing(null)}
