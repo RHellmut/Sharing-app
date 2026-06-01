@@ -145,7 +145,7 @@ create table if not exists public.calendar_events (
   date_end   date,
   time_start time,
   time_end   time,
-  person     text        not null check (person in ('person1', 'person2')),
+  person     text        not null check (person in ('person1', 'person2', 'both')),
   notes      text,
   created_at timestamptz not null default now()
 );
@@ -158,6 +158,13 @@ do $$ begin
 end $$;
 alter table public.calendar_events add column if not exists time_end  time;
 alter table public.calendar_events add column if not exists date_end  date;
+
+-- Migration: 'both' als Person-Wert erlauben
+do $$ begin
+  alter table public.calendar_events drop constraint if exists calendar_events_person_check;
+  alter table public.calendar_events add constraint calendar_events_person_check
+    check (person in ('person1', 'person2', 'both'));
+exception when others then null; end $$;
 
 alter table public.calendar_events enable row level security;
 

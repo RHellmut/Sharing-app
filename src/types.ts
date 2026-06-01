@@ -64,6 +64,8 @@ export interface VertragsEntry {
   laeuftAb: string | null;
 }
 
+export type CalendarPerson = PersonId | 'both';
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -71,7 +73,7 @@ export interface CalendarEvent {
   dateEnd?: string;      // YYYY-MM-DD (Enddatum, nur bei mehrtägigen)
   timeStart?: string;    // HH:MM
   timeEnd?: string;      // HH:MM
-  person: PersonId;
+  person: CalendarPerson;
   notes?: string;
   createdAt: string;
 }

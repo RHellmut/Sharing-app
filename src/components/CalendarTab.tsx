@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Check, Pencil, Clock, CalendarDays } from 'lucide-react';
-import { CalendarEvent, Settings } from '../types';
+import { CalendarEvent, CalendarPerson, Settings } from '../types';
 
 // ─── Constants ────────────────────────────────────────────────
 const HOUR_H  = 56;
@@ -15,8 +15,13 @@ const P1_BTN   = 'bg-green-500 hover:bg-green-600 text-white';
 const P2_BTN   = 'bg-violet-500 hover:bg-violet-600 text-white';
 const P1_BADGE = 'bg-green-500 text-white';
 const P2_BADGE = 'bg-violet-500 text-white';
-const P1_BLOCK = 'border-l-[3px] border-green-500 bg-green-50 text-green-900';
-const P2_BLOCK = 'border-l-[3px] border-violet-500 bg-violet-50 text-violet-900';
+const P1_BLOCK   = 'border-l-[3px] border-green-500 bg-green-50 text-green-900';
+const P2_BLOCK   = 'border-l-[3px] border-violet-500 bg-violet-50 text-violet-900';
+
+const PB_DOT   = 'bg-orange-500';
+const PB_BTN   = 'bg-orange-500 hover:bg-orange-600 text-white';
+const PB_BADGE = 'bg-orange-500 text-white';
+const PB_BLOCK = 'border-l-[3px] border-orange-500 bg-orange-50 text-orange-900';
 
 const iCls = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-slate-400';
 
@@ -59,7 +64,7 @@ function fmtShortDate(s: string): string {
 // ─── Form types ───────────────────────────────────────────────
 interface FormState {
   title:     string;
-  person:    'person1' | 'person2';
+  person:    CalendarPerson;
   multiDay:  boolean;
   dateEnd:   string;
   timeStart: string;
@@ -151,6 +156,11 @@ function EventForm({ form, startDate, settings, heading, showDelete, onChange, o
           </button>
         ))}
       </div>
+      <button onClick={() => onChange({ ...form, person: 'both' })}
+        className={`w-full py-2 rounded-xl text-sm font-medium transition-colors ${
+          form.person === 'both' ? PB_BTN : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+        Zusammen
+      </button>
 
       {/* Title */}
       <input type="text" value={form.title} onChange={e => onChange({ ...form, title: e.target.value })}
@@ -331,24 +341,27 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
             const ds   = fmtDate(day);
             const evts = eventsByDate.get(ds) ?? [];
             const isTd = ds === today;
-            const hasP1 = evts.some(e => e.person === 'person1');
-            const hasP2 = evts.some(e => e.person === 'person2');
+            const hasP1   = evts.some(e => e.person === 'person1');
+            const hasP2   = evts.some(e => e.person === 'person2');
+            const hasBoth = evts.some(e => e.person === 'both');
             const hasMulti = evts.some(e => e.dateEnd);
             return (
               <button key={ds} onClick={() => { setDay(ds); setView('day'); setShowAdd(false); setEditing(null); }}
                 className={`flex flex-col items-center rounded-xl py-1 transition-colors ${isTd ? 'bg-slate-700' : 'hover:bg-gray-100'}`}>
                 <span className={`text-sm font-medium leading-tight ${isTd ? 'text-white' : 'text-gray-700'}`}>{day}</span>
                 <div className="flex gap-0.5 mt-0.5 h-2 items-center">
-                  {hasP1 && <span className={`${hasMulti ? 'w-3 h-1.5 rounded-sm' : 'w-1.5 h-1.5 rounded-full'} ${P1_DOT}`} />}
-                  {hasP2 && <span className={`${hasMulti ? 'w-3 h-1.5 rounded-sm' : 'w-1.5 h-1.5 rounded-full'} ${P2_DOT}`} />}
+                  {hasP1   && <span className={`${hasMulti ? 'w-3 h-1.5 rounded-sm' : 'w-1.5 h-1.5 rounded-full'} ${P1_DOT}`} />}
+                  {hasP2   && <span className={`${hasMulti ? 'w-3 h-1.5 rounded-sm' : 'w-1.5 h-1.5 rounded-full'} ${P2_DOT}`} />}
+                  {hasBoth && <span className={`${hasMulti ? 'w-3 h-1.5 rounded-sm' : 'w-1.5 h-1.5 rounded-full'} ${PB_DOT}`} />}
                 </div>
               </button>
             );
           })}
         </div>
-        <div className="mt-5 flex items-center gap-4 justify-center">
+        <div className="mt-5 flex items-center gap-4 justify-center flex-wrap">
           <div className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${P1_DOT}`} /><span className="text-xs text-gray-500">{settings.person1Name}</span></div>
           <div className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${P2_DOT}`} /><span className="text-xs text-gray-500">{settings.person2Name}</span></div>
+          <div className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${PB_DOT}`} /><span className="text-xs text-gray-500">Zusammen</span></div>
         </div>
       </div>
     );
@@ -387,6 +400,7 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
                 <div className="flex gap-0.5 mt-0.5 h-1.5 items-center">
                   {evts.some(e => e.person === 'person1') && <span className={`w-1 h-1 rounded-full ${P1_DOT}`} />}
                   {evts.some(e => e.person === 'person2') && <span className={`w-1 h-1 rounded-full ${P2_DOT}`} />}
+                  {evts.some(e => e.person === 'both')    && <span className={`w-1 h-1 rounded-full ${PB_DOT}`} />}
                 </div>
               </button>
             );
@@ -430,14 +444,17 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
           <p className="text-[10px] font-medium text-gray-400 mb-1.5">Ganztags</p>
           <div className="space-y-1">
             {allDayEvts.map(evt => {
+              const isBoth = evt.person === 'both';
               const isP1   = evt.person === 'person1';
-              const badge  = isP1 ? P1_BADGE : P2_BADGE;
-              const name   = isP1 ? settings.person1Name : settings.person2Name;
+              const badge  = isBoth ? PB_BADGE : isP1 ? P1_BADGE : P2_BADGE;
+              const name   = isBoth ? 'Zusammen' : isP1 ? settings.person1Name : settings.person2Name;
               const isEdit = editing?.id === evt.id;
               return (
                 <button key={evt.id + dayDate} onClick={() => startEdit(evt)}
                   className={`w-full flex items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors ${
-                    isP1 ? 'bg-green-50 border border-green-200 hover:bg-green-100' : 'bg-violet-50 border border-violet-200 hover:bg-violet-100'
+                    isBoth ? 'bg-orange-50 border border-orange-200 hover:bg-orange-100'
+                    : isP1 ? 'bg-green-50 border border-green-200 hover:bg-green-100'
+                           : 'bg-violet-50 border border-violet-200 hover:bg-violet-100'
                   } ${isEdit ? 'ring-2 ring-slate-400' : ''}`}>
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${badge}`}>{name}</span>
                   <div className="flex-1 min-w-0">
@@ -485,10 +502,11 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
 
           {/* Timed events: P1 = left, P2 = right */}
           {timedEvts.map(evt => {
+            const isBoth = evt.person === 'both';
             const isP1   = evt.person === 'person1';
             const top    = toPx(evt.timeStart!);
             const height = Math.max(durPx(evt.timeStart!, evt.timeEnd), 28);
-            const blk    = isP1 ? P1_BLOCK : P2_BLOCK;
+            const blk    = isBoth ? PB_BLOCK : isP1 ? P1_BLOCK : P2_BLOCK;
             const time   = evt.timeStart + (evt.timeEnd ? ` – ${evt.timeEnd}` : '');
             const isEdit = editing?.id === evt.id;
 
@@ -498,8 +516,8 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
                 className={`absolute rounded-md px-1.5 py-1 overflow-hidden text-left transition-opacity ${blk} ${isEdit ? 'ring-2 ring-slate-500 opacity-60' : 'hover:brightness-95'}`}
                 style={{
                   top: top + 1, height: height - 2,
-                  left: isP1 ? `${LABEL_W + 2}px` : 'calc(50% + 1px)',
-                  right: isP1 ? 'calc(50% + 1px)' : '2px',
+                  left: isBoth ? `${LABEL_W + 2}px` : isP1 ? `${LABEL_W + 2}px` : 'calc(50% + 1px)',
+                  right: isBoth ? '2px' : isP1 ? 'calc(50% + 1px)' : '2px',
                   zIndex: 4, minWidth: 24,
                 }}>
                 <p className="text-[11px] font-semibold leading-tight truncate">{evt.title}</p>
