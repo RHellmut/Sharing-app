@@ -170,6 +170,7 @@ alter table public.calendar_events enable row level security;
 
 create policy "anon_select_calendar" on public.calendar_events for select to anon using (true);
 create policy "anon_insert_calendar" on public.calendar_events for insert to anon with check (true);
+create policy "anon_update_calendar" on public.calendar_events for update to anon using (true) with check (true);
 create policy "anon_delete_calendar" on public.calendar_events for delete to anon using (true);
 
 -- Realtime aktivieren (Sofort-Sync zwischen den Handys)

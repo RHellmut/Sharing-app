@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Expense, Settings, Kassensturz, KassensturzPeriodData, ShoppingItem, FixkostenAmounts, VertragsEntry, CalendarEvent } from './types';
+import { Expense, Settings, Kassensturz, KassensturzPeriodData, ShoppingItem, FixkostenAmounts, VertragsEntry, CalendarEvent, CalendarPerson } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 import { supabase } from './supabaseClient';
 
@@ -197,7 +197,7 @@ export function useStore(): StoreResult {
         dateEnd:   (r.date_end as string | null) ? (r.date_end as string).slice(0, 10) : undefined,
         timeStart: (r.time_start as string | null) ?? undefined,
         timeEnd:   (r.time_end   as string | null) ?? undefined,
-        person:    r.person as 'person1' | 'person2',
+        person:    r.person as CalendarPerson,
         notes:     (r.notes as string | null) ?? undefined,
         createdAt: r.created_at as string,
       })));
