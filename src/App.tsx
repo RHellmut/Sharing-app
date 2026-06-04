@@ -171,16 +171,16 @@ export default function App() {
             </div>
 
             {/* Category breakdown */}
-            {thisMonth.filter(e => e.categoryId !== 'ausgleich').length > 0 && (
+            {activeExpenses.filter(e => e.categoryId !== 'ausgleich').length > 0 && (
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-600 mb-3">Dieser Monat nach Kategorie</h3>
+                <h3 className="text-sm font-semibold text-gray-600 mb-3">Aufschlüsselung nach Kategorie</h3>
                 <div className="space-y-2.5">
                   {CATEGORIES.filter(c => c.id !== 'ausgleich').map(cat => {
-                    const catExpenses = thisMonth.filter(e => e.categoryId === cat.id);
+                    const catExpenses = activeExpenses.filter(e => e.categoryId === cat.id);
                     if (!catExpenses.length) return null;
                     const total = totalExpenses(catExpenses);
-                    const monthTotal = totalExpenses(thisMonth.filter(e => e.categoryId !== 'ausgleich'));
-                    const pct = Math.round((total / monthTotal) * 100);
+                    const periodTotal = totalExpenses(activeExpenses.filter(e => e.categoryId !== 'ausgleich'));
+                    const pct = Math.round((total / periodTotal) * 100);
                     return (
                       <div key={cat.id} className="flex items-center gap-2">
                         <span className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
