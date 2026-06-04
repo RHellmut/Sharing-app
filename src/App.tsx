@@ -249,7 +249,9 @@ export default function App() {
                 </div>
                 <div className="space-y-2">
                   {recent.map(e => {
-                    const cat = CATEGORIES.find(c => c.id === e.categoryId)!;
+                    const cat    = CATEGORIES.find(c => c.id === e.categoryId)!;
+                    const isP1   = e.paidBy === 'person1';
+                    const pName  = isP1 ? settings.person1Name : settings.person2Name;
                     return (
                       <div key={e.id} className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm border border-gray-100">
                         <span className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${cat.bgColor}`}>
@@ -257,9 +259,14 @@ export default function App() {
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">{e.description}</p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(e.date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}
-                          </p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <p className="text-xs text-gray-400">
+                              {new Date(e.date + 'T12:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}
+                            </p>
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${isP1 ? 'bg-green-100 text-green-700' : 'bg-violet-100 text-violet-700'}`}>
+                              {pName}
+                            </span>
+                          </div>
                         </div>
                         <span className="font-semibold text-gray-800 text-sm flex-shrink-0">{formatCurrency(e.amount)}</span>
                       </div>
