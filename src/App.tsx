@@ -217,21 +217,20 @@ export default function App() {
                   <h3 className="text-sm font-semibold text-gray-600 mb-3">Ausgaben nach Person</h3>
                   <div className="space-y-2.5">
                     {[
-                      { name: settings.person1Name, total: p1Total, pct: p1Pct, bar: 'bg-green-500',  more: p1More },
-                      { name: settings.person2Name, total: p2Total, pct: p2Pct, bar: 'bg-violet-500', more: !p1More },
+                      { name: settings.person1Name, total: p1Total, pct: p1Pct, bar: 'bg-green-500'  },
+                      { name: settings.person2Name, total: p2Total, pct: p2Pct, bar: 'bg-violet-500' },
                     ].map(p => (
                       <div key={p.name} className="flex items-center gap-2">
                         <div className="w-16 text-xs text-gray-600 truncate flex-shrink-0">{p.name}</div>
                         <div className="flex-1">
                           <div className="flex justify-between text-xs mb-0.5">
-                            <span className={`font-semibold ${p.more ? 'text-gray-800' : 'text-gray-400'}`}>{formatCurrency(p.total)}</span>
+                            <span className="font-semibold text-gray-800">{formatCurrency(p.total)}</span>
                             <span className="text-gray-400">{p.pct}%</span>
                           </div>
                           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${p.bar}`} style={{ width: `${p.pct}%` }} />
                           </div>
                         </div>
-                        {p.more && <span className="text-[10px] font-semibold text-gray-400 flex-shrink-0">↑</span>}
                       </div>
                     ))}
                   </div>
