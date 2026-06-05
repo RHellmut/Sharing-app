@@ -16,8 +16,8 @@ function compressImage(file: File): Promise<string> {
     reader.onload = ev => {
       const img = new Image();
       img.onload = () => {
-        // Bilder auf max. 500 px + 60 % Qualität verkleinern → ~30–60 KB für Cloud-Sync
-        const MAX = 500;
+        // Max. 1500 px + 85 % Qualität → Kassenzettel-Text lesbar
+        const MAX = 1500;
         let { width, height } = img;
         if (width > height ? width > MAX : height > MAX) {
           if (width > height) { height = (height * MAX) / width; width = MAX; }
@@ -26,7 +26,7 @@ function compressImage(file: File): Promise<string> {
         const canvas = document.createElement('canvas');
         canvas.width = width; canvas.height = height;
         canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.6));
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
       };
       img.onerror = reject;
       img.src = ev.target!.result as string;
