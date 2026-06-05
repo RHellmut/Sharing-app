@@ -6,15 +6,16 @@ import { calculateBalance, totalExpenses, formatCurrency } from '../calculations
 import { generateKassensturzPDF } from '../utils/generatePDF';
 
 interface Props {
-  kassensturz: Kassensturz;
-  prevCreatedAt: string | null;
-  expenses: Expense[];
-  settings: Settings;
-  onDelete: (id: string) => void;
+  kassensturz:    Kassensturz;
+  prevCreatedAt:  string | null;
+  expenses:       Expense[];
+  settings:       Settings;
+  onDelete:       (id: string) => void;
   onDeletePeriod: (ksId: string, expenseIds: string[]) => Promise<void>;
+  onEdit?:        (expense: Expense) => void;
 }
 
-export function KassensturzPeriod({ kassensturz, prevCreatedAt, expenses, settings, onDelete, onDeletePeriod }: Props) {
+export function KassensturzPeriod({ kassensturz, prevCreatedAt, expenses, settings, onDelete, onDeletePeriod, onEdit }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -116,7 +117,7 @@ export function KassensturzPeriod({ kassensturz, prevCreatedAt, expenses, settin
       {/* Expandable expense list */}
       {expanded && (
         <div className="px-4 pt-3 pb-4">
-          <ExpenseList expenses={expenses} settings={settings} onDelete={onDelete} />
+          <ExpenseList expenses={expenses} settings={settings} onDelete={onDelete} onEdit={onEdit} />
         </div>
       )}
     </div>

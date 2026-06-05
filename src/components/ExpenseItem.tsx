@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Trash2, ImageIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, ImageIcon, Pencil } from 'lucide-react';
 import { Expense, Settings } from '../types';
 import { CATEGORIES } from '../constants';
 import { formatCurrency } from '../calculations';
 import { CategoryIcon } from './CategoryIcon';
 
 interface Props {
-  expense: Expense;
+  expense:  Expense;
   settings: Settings;
   onDelete: (id: string) => void;
+  onEdit?:  (expense: Expense) => void;
 }
 
-export function ExpenseItem({ expense, settings, onDelete }: Props) {
+export function ExpenseItem({ expense, settings, onDelete, onEdit }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
 
@@ -64,8 +65,18 @@ export function ExpenseItem({ expense, settings, onDelete }: Props) {
               <p className="text-xs text-gray-400">{dateStr} · {paidByName}</p>
             </div>
           </button>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="font-bold text-gray-800">{formatCurrency(expense.amount)}</span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <span className="font-bold text-gray-800 mr-1">{formatCurrency(expense.amount)}</span>
+            {onEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(expense)}
+                className="p-1.5 text-gray-300 hover:text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
+                aria-label="Bearbeiten"
+              >
+                <Pencil size={15} />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => { if (window.confirm('Ausgabe wirklich löschen?')) onDelete(expense.id); }}

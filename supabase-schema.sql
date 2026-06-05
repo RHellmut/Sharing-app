@@ -50,6 +50,9 @@ create policy "anon_select_expenses" on public.expenses
 create policy "anon_insert_expenses" on public.expenses
   for insert to anon with check (true);
 
+create policy "anon_update_expenses" on public.expenses
+  for update to anon using (true) with check (true);
+
 create policy "anon_delete_expenses" on public.expenses
   for delete to anon using (true);
 

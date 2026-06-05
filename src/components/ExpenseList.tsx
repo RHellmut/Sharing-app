@@ -8,9 +8,10 @@ interface Props {
   expenses: Expense[];
   settings: Settings;
   onDelete: (id: string) => void;
+  onEdit?:  (expense: Expense) => void;
 }
 
-export function ExpenseList({ expenses, settings, onDelete }: Props) {
+export function ExpenseList({ expenses, settings, onDelete, onEdit }: Props) {
   const [filterCategory, setFilterCategory] = useState<CategoryId | 'all'>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
 
@@ -91,7 +92,7 @@ export function ExpenseList({ expenses, settings, onDelete }: Props) {
           <p className="text-center text-gray-400 py-10">Keine Ausgaben für diesen Filter</p>
         ) : (
           filtered.map(e => (
-            <ExpenseItem key={e.id} expense={e} settings={settings} onDelete={onDelete} />
+            <ExpenseItem key={e.id} expense={e} settings={settings} onDelete={onDelete} onEdit={onEdit} />
           ))
         )}
       </div>

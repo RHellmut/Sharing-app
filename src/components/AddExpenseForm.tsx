@@ -5,9 +5,11 @@ import { USER_CATEGORIES } from '../constants';
 import { CategoryIcon } from './CategoryIcon';
 
 interface Props {
-  settings: Settings;
-  onAdd: (expense: Expense) => void;
-  onDone: () => void;
+  settings:        Settings;
+  onAdd:           (expense: Expense) => void;
+  onDone:          () => void;
+  initialExpense?: Expense;
+  onUpdate?:       (expense: Expense) => void;
 }
 
 function compressImage(file: File): Promise<string> {
@@ -36,16 +38,21 @@ function compressImage(file: File): Promise<string> {
   });
 }
 
-export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [categoryId, setCategoryId] = useState<CategoryId>('sonstiges');
-  const [paidBy, setPaidBy] = useState<PersonId>('person1');
-  const [splitMode, setSplitMode] = useState<'half' | 'custom'>('half');
-  const [p1Split, setP1Split] = useState(50);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [notes, setNotes] = useState('');
-  const [receiptImage, setReceiptImage] = useState<string | undefined>();
+export function AddExpenseForm({ settings, onAdd, onDone, initialExpense, onUpdate }: Props) {
+  const isEdit = !!initialExpense;
+  const [description, setDescription] = useState(initialExpense?.description ?? '');
+  const [amount, setAmount] = useState(initialExpense ? String(initialExpense.amount) : '');
+  const [categoryId, setCategoryId] = useState<CategoryId>(initialExpense?.categoryId ?? 'sonstiges');
+  const [paidBy, setPaidBy] = useState<PersonId>(initialExpense?.paidBy ?? 'person1');
+  const [splitMode, setSplitMode] = useState<'half' | 'custom'>(
+    initialExpense ? (initialExpense.splitRatio === 0.5 ? 'half' : 'custom') : 'half'
+  );
+  const [p1Split, setP1Split] = useState(
+    initialExpense ? Math.round(initialExpense.splitRatio * 100) : 50
+  );
+  const [date, setDate] = useState(initialExpense?.date ?? new Date().toISOString().split('T')[0]);
+  const [notes, setNotes] = useState(initialExpense?.notes ?? '');
+  const [receiptImage, setReceiptImage] = useState<string | undefined>(initialExpense?.receiptImage);
   const [imgLoading, setImgLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
@@ -71,18 +78,19 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
   const handleSubmit = () => {
     if (!validate()) return;
     const n = parseFloat(amount.replace(',', '.'));
-    onAdd({
-      id: crypto.randomUUID(),
+    const expense: Expense = {
+      id:          isEdit ? initialExpense!.id : crypto.randomUUID(),
       description: description.trim(),
-      amount: Math.round(n * 100) / 100,
+      amount:      Math.round(n * 100) / 100,
       categoryId,
       paidBy,
-      splitRatio: splitMode === 'half' ? 0.5 : p1Split / 100,
+      splitRatio:  splitMode === 'half' ? 0.5 : p1Split / 100,
       date,
-      notes: notes.trim() || undefined,
+      notes:       notes.trim() || undefined,
       receiptImage,
-      createdAt: new Date().toISOString(),
-    });
+      createdAt:   isEdit ? initialExpense!.createdAt : new Date().toISOString(),
+    };
+    if (isEdit && onUpdate) { onUpdate(expense); } else { onAdd(expense); }
     onDone();
   };
 
@@ -299,7 +307,7 @@ export function AddExpenseForm({ settings, onAdd, onDone }: Props) {
         onClick={handleSubmit}
         className="w-full bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white rounded-xl py-4 font-semibold text-lg transition-colors shadow-md"
       >
-        Ausgabe hinzufügen
+        {isEdit ? 'Änderungen speichern' : 'Ausgabe hinzufügen'}
       </button>
     </div>
   );

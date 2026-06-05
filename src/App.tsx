@@ -1,5 +1,5 @@
 import React, { useState, lazy, Suspense } from 'react';
-import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart, Landmark, Globe, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, Plus, List, Settings as SettingsIcon, Archive, ShoppingCart, Landmark, Globe, CalendarDays, Pencil } from 'lucide-react';
 import { useStore } from './storage';
 import { BalanceCard } from './components/BalanceCard';
 import { AddExpenseForm } from './components/AddExpenseForm';
@@ -24,6 +24,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
   const [showWorldTravel, setShowWorldTravel] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<import('./types').Expense | null>(null);
 
   const {
     expenses,
@@ -37,6 +38,7 @@ export default function App() {
     opError,
     clearOpError,
     addExpense,
+    updateExpense,
     deleteExpense,
     updateSettings,
     performKassensturz,
@@ -268,7 +270,13 @@ export default function App() {
                             </span>
                           </div>
                         </div>
-                        <span className="font-semibold text-gray-800 text-sm flex-shrink-0">{formatCurrency(e.amount)}</span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className="font-semibold text-gray-800 text-sm">{formatCurrency(e.amount)}</span>
+                          <button onClick={() => setEditingExpense(e)}
+                            className="p-1.5 text-gray-300 hover:text-slate-500 hover:bg-slate-50 rounded-lg transition-colors">
+                            <Pencil size={14} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -326,6 +334,7 @@ export default function App() {
                 {kassensturzPeriods.map(period => (
                   <KassensturzPeriod
                     key={period.kassensturz.id}
+                    onEdit={setEditingExpense}
                     kassensturz={period.kassensturz}
                     prevCreatedAt={period.prevCreatedAt}
                     expenses={period.expenses}
@@ -340,6 +349,7 @@ export default function App() {
                 expenses={activeExpenses}
                 settings={settings}
                 onDelete={deleteExpense}
+                onEdit={setEditingExpense}
               />
             )}
           </div>
@@ -449,6 +459,28 @@ export default function App() {
           <span className="text-[10px]">Kalender</span>
         </button>
       </nav>
+
+      {/* ── Edit Expense Modal ── */}
+      {editingExpense && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+            <h2 className="font-semibold text-gray-800">Ausgabe bearbeiten</h2>
+            <button onClick={() => setEditingExpense(null)}
+              className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+              <Plus size={20} className="rotate-45" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 pt-4">
+            <AddExpenseForm
+              settings={settings}
+              onAdd={addExpense}
+              onDone={() => setEditingExpense(null)}
+              initialExpense={editingExpense}
+              onUpdate={expense => { updateExpense(expense); setEditingExpense(null); }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Settings Modal ── */}
       {showSettings && (

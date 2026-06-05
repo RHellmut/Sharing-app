@@ -51,6 +51,7 @@ export interface StoreResult {
   opError:              string | null;
   clearOpError:         () => void;
   addExpense:           (e: Expense) => void;
+  updateExpense:        (e: Expense) => void;
   deleteExpense:        (id: string) => void;
   updateSettings:       (s: Settings) => void;
   performKassensturz:   () => Promise<void>;
@@ -275,6 +276,33 @@ export function useStore(): StoreResult {
           const msg = err instanceof Error ? err.message : String(err);
           setExpenses(prev => prev.filter(e => e.id !== expense.id));
           setOpError(`Netzwerkfehler beim Speichern – Internetverbindung prüfen. (${msg})`);
+        }
+      })();
+    },
+
+    updateExpense(expense: Expense) {
+      const snapshot = expenses;
+      setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e));
+      void (async () => {
+        try {
+          const { error: err } = await supabase.from('expenses').update({
+            description:   expense.description,
+            amount:        expense.amount,
+            category_id:   expense.categoryId,
+            paid_by:       expense.paidBy,
+            split_ratio:   expense.splitRatio,
+            date:          expense.date,
+            receipt_image: expense.receiptImage ?? null,
+            notes:         expense.notes ?? null,
+          }).eq('id', expense.id);
+          if (err) {
+            setExpenses(snapshot);
+            setOpError(`Eintrag konnte nicht aktualisiert werden: ${err.message}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setExpenses(snapshot);
+          setOpError(`Netzwerkfehler beim Aktualisieren. (${msg})`);
         }
       })();
     },
