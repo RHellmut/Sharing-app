@@ -8,6 +8,7 @@ export type CategoryId =
   | 'edeka'
   | 'rewe'
   | 'dm'
+  | 'toogoodtogo'
   | 'sonstiges'
   | 'urlaub'
   | 'ausgleich';
