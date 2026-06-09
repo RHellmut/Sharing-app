@@ -76,5 +76,7 @@ export interface CalendarEvent {
   timeEnd?: string;      // HH:MM
   person: CalendarPerson;
   notes?: string;
+  reminderMinutes?: number;  // minutes before event; 0=at time, 30/60/120/1440=relative offset
+  reminderAt?: string;       // "YYYY-MM-DD HH:MM" Vienna local — custom absolute reminder time
   createdAt: string;
 }

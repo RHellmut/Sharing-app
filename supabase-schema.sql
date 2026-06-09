@@ -199,13 +199,38 @@ create policy "anon_all_push_subscriptions" on public.push_subscriptions
   for all to anon using (true) with check (true);
 
 -- Dedup: track already-sent notifications to avoid double-sends
+-- reminder_key: "m0"/"m30"/"m60"/"m120"/"m1440" for relative, "at" for custom absolute
 create table if not exists public.sent_push_notifications (
-  event_id         uuid not null,
-  reminder_minutes int  not null default 120,
-  sent_at          timestamptz not null default now(),
-  primary key (event_id, reminder_minutes)
+  event_id     uuid not null,
+  reminder_key text not null,
+  sent_at      timestamptz not null default now(),
+  primary key (event_id, reminder_key)
 );
 
 alter table public.sent_push_notifications enable row level security;
 create policy "anon_all_sent_push" on public.sent_push_notifications
   for all to anon using (true) with check (true);
+
+-- Configurable reminder columns on calendar_events
+alter table public.calendar_events add column if not exists reminder_minutes int;  -- null=off, 0=at time, 30/60/120/1440=minutes before
+alter table public.calendar_events add column if not exists reminder_at text;      -- "YYYY-MM-DD HH:MM" Vienna local for custom absolute time
+
+-- Migrate old sent_push_notifications table if it has the old int key
+-- (run this once to drop and recreate with text key)
+do $$ begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name='sent_push_notifications' and column_name='reminder_minutes'
+  ) then
+    drop table public.sent_push_notifications;
+    create table public.sent_push_notifications (
+      event_id     uuid not null,
+      reminder_key text not null,
+      sent_at      timestamptz not null default now(),
+      primary key (event_id, reminder_key)
+    );
+    alter table public.sent_push_notifications enable row level security;
+    create policy "anon_all_sent_push" on public.sent_push_notifications
+      for all to anon using (true) with check (true);
+  end if;
+end $$;

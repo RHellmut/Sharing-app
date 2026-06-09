@@ -61,18 +61,60 @@ function fmtShortDate(s: string): string {
   return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
 }
 
+// ─── Reminder types ───────────────────────────────────────────
+type ReminderMode = 'none' | '0' | '30' | '60' | '120' | '1440' | 'custom';
+
+const REMINDER_OPTIONS: { value: ReminderMode; label: string }[] = [
+  { value: 'none',   label: 'Keine Erinnerung' },
+  { value: '0',      label: 'Zum Zeitpunkt' },
+  { value: '30',     label: '30 Min vorher' },
+  { value: '60',     label: '1 Std vorher' },
+  { value: '120',    label: '2 Std vorher' },
+  { value: '1440',   label: '1 Tag vorher' },
+  { value: 'custom', label: 'Eigene Zeit…' },
+];
+
+function formToReminder(form: FormState): { reminderMinutes: number | undefined; reminderAt: string | undefined } {
+  if (form.reminderMode === 'none') return { reminderMinutes: undefined, reminderAt: undefined };
+  if (form.reminderMode === 'custom') {
+    const at = form.reminderDate && form.reminderTime ? `${form.reminderDate} ${form.reminderTime}` : undefined;
+    return { reminderMinutes: undefined, reminderAt: at };
+  }
+  return { reminderMinutes: Number(form.reminderMode), reminderAt: undefined };
+}
+
+const KNOWN_MODES: ReminderMode[] = ['none', '0', '30', '60', '120', '1440', 'custom'];
+function eventToReminderForm(evt: CalendarEvent): Pick<FormState, 'reminderMode' | 'reminderDate' | 'reminderTime'> {
+  if (evt.reminderAt) {
+    const [d = '', t = ''] = evt.reminderAt.split(' ');
+    return { reminderMode: 'custom', reminderDate: d, reminderTime: t };
+  }
+  if (evt.reminderMinutes !== undefined) {
+    const mode = String(evt.reminderMinutes) as ReminderMode;
+    return { reminderMode: KNOWN_MODES.includes(mode) ? mode : '120', reminderDate: '', reminderTime: '' };
+  }
+  return { reminderMode: 'none', reminderDate: '', reminderTime: '' };
+}
+
 // ─── Form types ───────────────────────────────────────────────
 interface FormState {
-  title:     string;
-  person:    CalendarPerson;
-  multiDay:  boolean;
-  dateEnd:   string;
-  timeStart: string;
-  timeEnd:   string;
-  notes:     string;
+  title:        string;
+  person:       CalendarPerson;
+  multiDay:     boolean;
+  dateEnd:      string;
+  timeStart:    string;
+  timeEnd:      string;
+  notes:        string;
+  reminderMode: ReminderMode;
+  reminderDate: string;
+  reminderTime: string;
 }
 interface EditState extends FormState { id: string }
-const emptyForm = (): FormState => ({ title: '', person: 'person1', multiDay: false, dateEnd: '', timeStart: '', timeEnd: '', notes: '' });
+const emptyForm = (): FormState => ({
+  title: '', person: 'person1', multiDay: false, dateEnd: '',
+  timeStart: '', timeEnd: '', notes: '',
+  reminderMode: '120', reminderDate: '', reminderTime: '',
+});
 
 // ─── Props ────────────────────────────────────────────────────
 interface Props {
@@ -201,6 +243,25 @@ function EventForm({ form, startDate, settings, heading, showDelete, onChange, o
       <input type="text" value={form.notes} onChange={e => onChange({ ...form, notes: e.target.value })}
         placeholder="Notiz (optional)" className={iCls} style={{ fontSize: '16px' }} />
 
+      {/* Reminder */}
+      <div>
+        <p className="text-[10px] font-medium text-gray-400 mb-1 ml-1">Erinnerung</p>
+        <select
+          value={form.reminderMode}
+          onChange={e => onChange({ ...form, reminderMode: e.target.value as ReminderMode })}
+          className={`${iCls} bg-white`}
+          style={{ fontSize: '16px' }}
+        >
+          {REMINDER_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        {form.reminderMode === 'custom' && (
+          <div className="flex gap-2 mt-2">
+            <DateInput label="Datum" value={form.reminderDate} onChange={v => onChange({ ...form, reminderDate: v })} />
+            <TimeInput label="Uhrzeit" value={form.reminderTime} onChange={v => onChange({ ...form, reminderTime: v })} />
+          </div>
+        )}
+      </div>
+
       {/* Buttons */}
       <div className="flex gap-2">
         {showDelete && (
@@ -284,12 +345,14 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
   // ── Form actions ──
   const submitAdd = () => {
     if (!addForm.title.trim()) return;
+    const { reminderMinutes, reminderAt } = formToReminder(addForm);
     onAdd({
       id: makeId(), title: addForm.title.trim(), date: dayDate,
       dateEnd:   addForm.multiDay && addForm.dateEnd > dayDate ? addForm.dateEnd : undefined,
       timeStart: !addForm.multiDay && addForm.timeStart ? addForm.timeStart : undefined,
       timeEnd:   !addForm.multiDay && addForm.timeEnd   ? addForm.timeEnd   : undefined,
       person: addForm.person, notes: addForm.notes.trim() || undefined,
+      reminderMinutes, reminderAt,
       createdAt: new Date().toISOString(),
     });
     setAddForm(emptyForm()); setShowAdd(false);
@@ -299,17 +362,20 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
     if (!editing?.title.trim()) return;
     const orig = events.find(e => e.id === editing.id);
     if (!orig) return;
+    const { reminderMinutes, reminderAt } = formToReminder(editing);
     onUpdate({
       ...orig, title: editing.title.trim(),
       dateEnd:   editing.multiDay && editing.dateEnd > orig.date ? editing.dateEnd : undefined,
       timeStart: !editing.multiDay && editing.timeStart ? editing.timeStart : undefined,
       timeEnd:   !editing.multiDay && editing.timeEnd   ? editing.timeEnd   : undefined,
       person: editing.person, notes: editing.notes.trim() || undefined,
+      reminderMinutes, reminderAt,
     });
     setEditing(null);
   };
 
   const startEdit = (evt: CalendarEvent) => {
+    const { reminderMode, reminderDate, reminderTime } = eventToReminderForm(evt);
     setEditing({
       id: evt.id, title: evt.title, person: evt.person,
       multiDay:  !!evt.dateEnd,
@@ -317,6 +383,7 @@ export function CalendarTab({ events, settings, onAdd, onDelete, onUpdate }: Pro
       timeStart: evt.timeStart ?? '',
       timeEnd:   evt.timeEnd   ?? '',
       notes:     evt.notes     ?? '',
+      reminderMode, reminderDate, reminderTime,
     });
     setShowAdd(false);
   };

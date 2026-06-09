@@ -192,15 +192,17 @@ export function useStore(): StoreResult {
         .from('calendar_events').select('*').order('date', { ascending: true });
       if (!mounted) return;
       setCalendarEvents((data ?? []).map(r => ({
-        id:        r.id as string,
-        title:     r.title as string,
-        date:      (r.date     as string).slice(0, 10),
-        dateEnd:   (r.date_end as string | null) ? (r.date_end as string).slice(0, 10) : undefined,
-        timeStart: (r.time_start as string | null) ?? undefined,
-        timeEnd:   (r.time_end   as string | null) ?? undefined,
-        person:    r.person as CalendarPerson,
-        notes:     (r.notes as string | null) ?? undefined,
-        createdAt: r.created_at as string,
+        id:             r.id as string,
+        title:          r.title as string,
+        date:           (r.date     as string).slice(0, 10),
+        dateEnd:        (r.date_end as string | null) ? (r.date_end as string).slice(0, 10) : undefined,
+        timeStart:      (r.time_start as string | null) ?? undefined,
+        timeEnd:        (r.time_end   as string | null) ?? undefined,
+        person:         r.person as CalendarPerson,
+        notes:          (r.notes as string | null) ?? undefined,
+        reminderMinutes: r.reminder_minutes !== null && r.reminder_minutes !== undefined ? Number(r.reminder_minutes) : undefined,
+        reminderAt:     (r.reminder_at as string | null) ?? undefined,
+        createdAt:      r.created_at as string,
       })));
     };
 
@@ -545,15 +547,17 @@ export function useStore(): StoreResult {
       void (async () => {
         try {
           const { error: err } = await supabase.from('calendar_events').insert({
-            id:         event.id,
-            title:      event.title,
-            date:       event.date,
-            date_end:   event.dateEnd   ?? null,
-            time_start: event.timeStart ?? null,
-            time_end:   event.timeEnd   ?? null,
-            person:     event.person,
-            notes:      event.notes ?? null,
-            created_at: event.createdAt,
+            id:               event.id,
+            title:            event.title,
+            date:             event.date,
+            date_end:         event.dateEnd         ?? null,
+            time_start:       event.timeStart       ?? null,
+            time_end:         event.timeEnd         ?? null,
+            person:           event.person,
+            notes:            event.notes           ?? null,
+            reminder_minutes: event.reminderMinutes ?? null,
+            reminder_at:      event.reminderAt      ?? null,
+            created_at:       event.createdAt,
           });
           if (err) {
             setCalendarEvents(prev => prev.filter(e => e.id !== event.id));
@@ -594,13 +598,15 @@ export function useStore(): StoreResult {
       void (async () => {
         try {
           const { error: err } = await supabase.from('calendar_events').update({
-            title:      event.title,
-            date:       event.date,
-            date_end:   event.dateEnd   ?? null,
-            time_start: event.timeStart ?? null,
-            time_end:   event.timeEnd   ?? null,
-            person:     event.person,
-            notes:      event.notes     ?? null,
+            title:            event.title,
+            date:             event.date,
+            date_end:         event.dateEnd         ?? null,
+            time_start:       event.timeStart       ?? null,
+            time_end:         event.timeEnd         ?? null,
+            person:           event.person,
+            notes:            event.notes           ?? null,
+            reminder_minutes: event.reminderMinutes ?? null,
+            reminder_at:      event.reminderAt      ?? null,
           }).eq('id', event.id);
           if (err) {
             setCalendarEvents(snapshot);
