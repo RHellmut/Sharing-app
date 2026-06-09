@@ -185,3 +185,27 @@ alter publication supabase_realtime add table public.fixkosten;
 alter publication supabase_realtime add table public.vertraege;
 alter publication supabase_realtime add table public.visited_countries;
 alter publication supabase_realtime add table public.calendar_events;
+
+-- Push Subscriptions
+create table if not exists public.push_subscriptions (
+  endpoint   text        primary key,
+  p256dh     text        not null,
+  auth       text        not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.push_subscriptions enable row level security;
+create policy "anon_all_push_subscriptions" on public.push_subscriptions
+  for all to anon using (true) with check (true);
+
+-- Dedup: track already-sent notifications to avoid double-sends
+create table if not exists public.sent_push_notifications (
+  event_id         uuid not null,
+  reminder_minutes int  not null default 120,
+  sent_at          timestamptz not null default now(),
+  primary key (event_id, reminder_minutes)
+);
+
+alter table public.sent_push_notifications enable row level security;
+create policy "anon_all_sent_push" on public.sent_push_notifications
+  for all to anon using (true) with check (true);

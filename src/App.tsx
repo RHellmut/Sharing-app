@@ -9,6 +9,7 @@ import { ShoppingList } from './components/ShoppingList';
 import { FixkostenTab } from './components/FixkostenTab';
 import { CalendarTab } from './components/CalendarTab';
 import { SettingsModal } from './components/SettingsModal';
+import { NotificationBell } from './components/NotificationBell';
 
 const WorldTravel = lazy(() =>
   import('./components/WorldTravel').then(m => ({ default: m.WorldTravel }))
@@ -124,6 +125,7 @@ export default function App() {
           <Globe size={15} className="flex-shrink-0" />
           <span className="text-xs font-semibold truncate">Lisl&apos;s World Travel</span>
         </button>
+        <NotificationBell />
         <button
           onClick={() => setShowSettings(true)}
           className="p-2 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0"
