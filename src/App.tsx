@@ -409,7 +409,7 @@ export default function App() {
       </main>
 
       {/* ── Bottom Nav ── */}
-      <nav className="safe-pb fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 flex items-stretch z-40">
+      <nav className="safe-pb fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 flex items-stretch z-40 px-4">
         <button
           onClick={() => setTab('overview')}
           className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors ${
