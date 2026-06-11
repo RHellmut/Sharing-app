@@ -65,7 +65,8 @@ export interface VertragsEntry {
   laeuftAb: string | null;
 }
 
-export type CalendarPerson = PersonId | 'both';
+/** 'abfall' = grauer Import-Termin (Abfallkalender), nicht im Formular wählbar */
+export type CalendarPerson = PersonId | 'both' | 'abfall';
 
 export interface CalendarEvent {
   id: string;
