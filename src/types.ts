@@ -81,3 +81,13 @@ export interface CalendarEvent {
   reminderAt?: string;       // "YYYY-MM-DD HH:MM" Vienna local — custom absolute reminder time
   createdAt: string;
 }
+
+export interface StoredDocument {
+  id: string;
+  name: string;
+  category: 'vertraege' | 'sonstiges';
+  mimeType: string;
+  sizeBytes: number;
+  storagePath: string;
+  createdAt: string;
+}

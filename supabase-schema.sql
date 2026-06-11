@@ -176,6 +176,34 @@ create policy "anon_insert_calendar" on public.calendar_events for insert to ano
 create policy "anon_update_calendar" on public.calendar_events for update to anon using (true) with check (true);
 create policy "anon_delete_calendar" on public.calendar_events for delete to anon using (true);
 
+-- Dokumentenablage-Tabelle
+create table if not exists public.documents (
+  id           uuid        primary key default gen_random_uuid(),
+  name         text        not null,
+  category     text        not null check (category in ('vertraege', 'sonstiges')),
+  mime_type    text        not null default '',
+  size_bytes   integer     not null default 0,
+  storage_path text        not null,
+  created_at   timestamptz not null default now()
+);
+
+alter table public.documents enable row level security;
+create policy "anon_select_documents" on public.documents for select to anon using (true);
+create policy "anon_insert_documents" on public.documents for insert to anon with check (true);
+create policy "anon_delete_documents" on public.documents for delete to anon using (true);
+
+-- Storage-Bucket für Dokumente
+insert into storage.buckets (id, name, public)
+values ('documents', 'documents', false)
+on conflict (id) do nothing;
+
+create policy "anon_select_doc_objects" on storage.objects
+  for select to anon using (bucket_id = 'documents');
+create policy "anon_insert_doc_objects" on storage.objects
+  for insert to anon with check (bucket_id = 'documents');
+create policy "anon_delete_doc_objects" on storage.objects
+  for delete to anon using (bucket_id = 'documents');
+
 -- Realtime aktivieren (Sofort-Sync zwischen den Handys)
 alter publication supabase_realtime add table public.expenses;
 alter publication supabase_realtime add table public.settings;
@@ -185,6 +213,7 @@ alter publication supabase_realtime add table public.fixkosten;
 alter publication supabase_realtime add table public.vertraege;
 alter publication supabase_realtime add table public.visited_countries;
 alter publication supabase_realtime add table public.calendar_events;
+alter publication supabase_realtime add table public.documents;
 
 -- Push Subscriptions
 create table if not exists public.push_subscriptions (

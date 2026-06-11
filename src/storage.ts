@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Expense, Settings, Kassensturz, KassensturzPeriodData, ShoppingItem, FixkostenAmounts, VertragsEntry, CalendarEvent, CalendarPerson } from './types';
+import { Expense, Settings, Kassensturz, KassensturzPeriodData, ShoppingItem, FixkostenAmounts, VertragsEntry, CalendarEvent, CalendarPerson, StoredDocument } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 import { supabase } from './supabaseClient';
 
@@ -45,6 +45,7 @@ export interface StoreResult {
   vertraege:            Record<string, VertragsEntry>;
   visitedCountries:     Set<string>;
   calendarEvents:       CalendarEvent[];
+  documents:            StoredDocument[];
   settings:             Settings;
   loading:              boolean;
   error:                string | null;
@@ -66,6 +67,9 @@ export interface StoreResult {
   addCalendarEvent:     (event: CalendarEvent) => void;
   deleteCalendarEvent:  (id: string) => void;
   updateCalendarEvent:  (event: CalendarEvent) => void;
+  addDocument:          (name: string, category: StoredDocument['category'], file: File) => Promise<void>;
+  deleteDocument:       (id: string) => void;
+  getDocumentUrl:       (storagePath: string) => Promise<string | null>;
 }
 
 export function useStore(): StoreResult {
@@ -76,6 +80,7 @@ export function useStore(): StoreResult {
   const [vertraege, setVertraege] = useState<Record<string, VertragsEntry>>({});
   const [visitedCountries, setVisitedCountries] = useState<Set<string>>(new Set());
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [documents, setDocuments] = useState<StoredDocument[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -206,9 +211,25 @@ export function useStore(): StoreResult {
       })));
     };
 
+    const fetchDocuments = async () => {
+      const { data } = await supabase
+        .from('documents').select('*').order('created_at', { ascending: false });
+      if (!mounted) return;
+      setDocuments((data ?? []).map(r => ({
+        id:          r.id as string,
+        name:        r.name as string,
+        category:    r.category as StoredDocument['category'],
+        mimeType:    r.mime_type as string,
+        sizeBytes:   Number(r.size_bytes),
+        storagePath: r.storage_path as string,
+        createdAt:   r.created_at as string,
+      })));
+    };
+
     void Promise.all([
       fetchExpenses(), fetchSettings(), fetchKassensturz(), fetchShoppingItems(),
       fetchFixkosten(), fetchVertraege(), fetchVisitedCountries(), fetchCalendarEvents(),
+      fetchDocuments(),
     ]).finally(() => { if (mounted) setLoading(false); });
 
     const channel = supabase
@@ -221,6 +242,7 @@ export function useStore(): StoreResult {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vertraege' }, fetchVertraege)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visited_countries' }, fetchVisitedCountries)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, fetchCalendarEvents)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, fetchDocuments)
       .subscribe();
 
     const poll = setInterval(() => {
@@ -247,6 +269,7 @@ export function useStore(): StoreResult {
     vertraege,
     visitedCountries,
     calendarEvents,
+    documents,
     settings,
     loading,
     error,
@@ -618,6 +641,81 @@ export function useStore(): StoreResult {
           setOpError(`Netzwerkfehler beim Aktualisieren des Termins. (${msg})`);
         }
       })();
+    },
+
+    async addDocument(name: string, category: StoredDocument['category'], file: File) {
+      const id = crypto.randomUUID();
+      const storagePath = `${id}/${file.name}`;
+      try {
+        const { error: uploadErr } = await supabase.storage
+          .from('documents')
+          .upload(storagePath, file);
+        if (uploadErr) throw uploadErr;
+
+        const doc: StoredDocument = {
+          id,
+          name: name || file.name,
+          category,
+          mimeType: file.type || 'application/octet-stream',
+          sizeBytes: file.size,
+          storagePath,
+          createdAt: new Date().toISOString(),
+        };
+
+        const { error: dbErr } = await supabase.from('documents').insert({
+          id:           doc.id,
+          name:         doc.name,
+          category:     doc.category,
+          mime_type:    doc.mimeType,
+          size_bytes:   doc.sizeBytes,
+          storage_path: doc.storagePath,
+          created_at:   doc.createdAt,
+        });
+        if (dbErr) {
+          await supabase.storage.from('documents').remove([storagePath]);
+          throw dbErr;
+        }
+        setDocuments(prev => [doc, ...prev]);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setOpError(`Dokument konnte nicht hochgeladen werden: ${msg}`);
+        throw err;
+      }
+    },
+
+    deleteDocument(id: string) {
+      const doc = documents.find(d => d.id === id);
+      if (!doc) return;
+      const snapshot = documents;
+      setDocuments(prev => prev.filter(d => d.id !== id));
+      void (async () => {
+        try {
+          const { error: storageErr } = await supabase.storage
+            .from('documents').remove([doc.storagePath]);
+          if (storageErr) {
+            setDocuments(snapshot);
+            setOpError(`Datei konnte nicht gelöscht werden: ${storageErr.message}`);
+            return;
+          }
+          const { error: dbErr } = await supabase.from('documents').delete().eq('id', id);
+          if (dbErr) {
+            setDocuments(snapshot);
+            setOpError(`Dokument konnte nicht gelöscht werden: ${dbErr.message}`);
+          }
+        } catch (err: unknown) {
+          setDocuments(snapshot);
+          const msg = err instanceof Error ? err.message : String(err);
+          setOpError(`Netzwerkfehler beim Löschen des Dokuments. (${msg})`);
+        }
+      })();
+    },
+
+    async getDocumentUrl(storagePath: string): Promise<string | null> {
+      const { data, error: err } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(storagePath, 300);
+      if (err || !data) return null;
+      return data.signedUrl;
     },
   };
 }
