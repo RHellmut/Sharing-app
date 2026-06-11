@@ -409,41 +409,44 @@ export default function App() {
       </main>
 
       {/* ── Bottom Nav ── */}
-      <nav className="safe-pb fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 flex items-stretch z-40 px-4">
-        <button
-          onClick={() => setTab('overview')}
-          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
-            tab === 'overview' ? 'text-slate-700' : 'text-gray-400'
-          }`}
-        >
-          {tab === 'overview' && <span className="absolute top-0 left-2 right-2 h-0.5 bg-slate-700 rounded-b-full" />}
-          <LayoutDashboard size={20} />
-          <span className={`text-[10px] ${tab === 'overview' ? 'font-semibold' : ''}`}>Übersicht</span>
-        </button>
+      <nav className="safe-pb fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 flex items-stretch z-40">
 
-        <button
-          onClick={() => setTab('history')}
-          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
-            tab === 'history' ? 'text-slate-700' : 'text-gray-400'
-          }`}
-        >
-          {tab === 'history' && <span className="absolute top-0 left-2 right-2 h-0.5 bg-slate-700 rounded-b-full" />}
-          <List size={20} />
-          <span className={`text-[10px] ${tab === 'history' ? 'font-semibold' : ''}`}>Verlauf</span>
-        </button>
+        {/* Linke 3 Tabs – justify-end drängt sie zum + hin */}
+        <div className="flex flex-1 justify-end items-stretch gap-0.5">
+          <button
+            onClick={() => setTab('overview')}
+            className={`w-[50px] flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
+              tab === 'overview' ? 'text-slate-700' : 'text-gray-400'
+            }`}
+          >
+            {tab === 'overview' && <span className="absolute top-0 left-1 right-1 h-0.5 bg-slate-700 rounded-b-full" />}
+            <LayoutDashboard size={20} />
+            <span className={`text-[10px] ${tab === 'overview' ? 'font-semibold' : ''}`}>Übersicht</span>
+          </button>
+          <button
+            onClick={() => setTab('history')}
+            className={`w-[50px] flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
+              tab === 'history' ? 'text-slate-700' : 'text-gray-400'
+            }`}
+          >
+            {tab === 'history' && <span className="absolute top-0 left-1 right-1 h-0.5 bg-slate-700 rounded-b-full" />}
+            <List size={20} />
+            <span className={`text-[10px] ${tab === 'history' ? 'font-semibold' : ''}`}>Verlauf</span>
+          </button>
+          <button
+            onClick={() => setTab('dokumente')}
+            className={`w-[50px] flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
+              tab === 'dokumente' ? 'text-slate-700' : 'text-gray-400'
+            }`}
+          >
+            {tab === 'dokumente' && <span className="absolute top-0 left-1 right-1 h-0.5 bg-slate-700 rounded-b-full" />}
+            <FolderOpen size={20} />
+            <span className={`text-[10px] ${tab === 'dokumente' ? 'font-semibold' : ''}`}>Dokumente</span>
+          </button>
+        </div>
 
-        <button
-          onClick={() => setTab('dokumente')}
-          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
-            tab === 'dokumente' ? 'text-slate-700' : 'text-gray-400'
-          }`}
-        >
-          {tab === 'dokumente' && <span className="absolute top-0 left-2 right-2 h-0.5 bg-slate-700 rounded-b-full" />}
-          <FolderOpen size={20} />
-          <span className={`text-[10px] ${tab === 'dokumente' ? 'font-semibold' : ''}`}>Dokumente</span>
-        </button>
-
-        <div className="flex-none flex items-center justify-center px-5">
+        {/* + Button */}
+        <div className="flex-none flex items-center justify-center px-2">
           <button
             onClick={() => setTab('add')}
             className={`w-14 h-14 -mt-5 rounded-full flex items-center justify-center shadow-lg transition-all ${
@@ -454,43 +457,44 @@ export default function App() {
           </button>
         </div>
 
-        <button
-          onClick={() => setTab('shopping')}
-          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
-            tab === 'shopping' ? 'text-slate-700' : 'text-gray-400'
-          }`}
-        >
-          {tab === 'shopping' && <span className="absolute top-0 left-2 right-2 h-0.5 bg-slate-700 rounded-b-full" />}
-          <ShoppingCart size={20} />
-          {shoppingItems.filter(i => !i.checked).length > 0 && (
-            <span className="absolute top-2 right-3 w-4 h-4 bg-slate-700 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-              {shoppingItems.filter(i => !i.checked).length}
-            </span>
-          )}
-          <span className={`text-[10px] ${tab === 'shopping' ? 'font-semibold' : ''}`}>Liste</span>
-        </button>
-
-        <button
-          onClick={() => setTab('fixkosten')}
-          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
-            tab === 'fixkosten' ? 'text-slate-700' : 'text-gray-400'
-          }`}
-        >
-          {tab === 'fixkosten' && <span className="absolute top-0 left-2 right-2 h-0.5 bg-slate-700 rounded-b-full" />}
-          <Landmark size={20} />
-          <span className={`text-[10px] ${tab === 'fixkosten' ? 'font-semibold' : ''}`}>Fixkosten</span>
-        </button>
-
-        <button
-          onClick={() => setTab('calendar')}
-          className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
-            tab === 'calendar' ? 'text-slate-700' : 'text-gray-400'
-          }`}
-        >
-          {tab === 'calendar' && <span className="absolute top-0 left-2 right-2 h-0.5 bg-slate-700 rounded-b-full" />}
-          <CalendarDays size={20} />
-          <span className={`text-[10px] ${tab === 'calendar' ? 'font-semibold' : ''}`}>Kalender</span>
-        </button>
+        {/* Rechte 3 Tabs – justify-start drängt sie zum + hin */}
+        <div className="flex flex-1 justify-start items-stretch gap-0.5">
+          <button
+            onClick={() => setTab('shopping')}
+            className={`w-[50px] flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
+              tab === 'shopping' ? 'text-slate-700' : 'text-gray-400'
+            }`}
+          >
+            {tab === 'shopping' && <span className="absolute top-0 left-1 right-1 h-0.5 bg-slate-700 rounded-b-full" />}
+            <ShoppingCart size={20} />
+            {shoppingItems.filter(i => !i.checked).length > 0 && (
+              <span className="absolute top-2 right-0 w-4 h-4 bg-slate-700 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {shoppingItems.filter(i => !i.checked).length}
+              </span>
+            )}
+            <span className={`text-[10px] ${tab === 'shopping' ? 'font-semibold' : ''}`}>Liste</span>
+          </button>
+          <button
+            onClick={() => setTab('fixkosten')}
+            className={`w-[50px] flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
+              tab === 'fixkosten' ? 'text-slate-700' : 'text-gray-400'
+            }`}
+          >
+            {tab === 'fixkosten' && <span className="absolute top-0 left-1 right-1 h-0.5 bg-slate-700 rounded-b-full" />}
+            <Landmark size={20} />
+            <span className={`text-[10px] ${tab === 'fixkosten' ? 'font-semibold' : ''}`}>Fixkosten</span>
+          </button>
+          <button
+            onClick={() => setTab('calendar')}
+            className={`w-[50px] flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative ${
+              tab === 'calendar' ? 'text-slate-700' : 'text-gray-400'
+            }`}
+          >
+            {tab === 'calendar' && <span className="absolute top-0 left-1 right-1 h-0.5 bg-slate-700 rounded-b-full" />}
+            <CalendarDays size={20} />
+            <span className={`text-[10px] ${tab === 'calendar' ? 'font-semibold' : ''}`}>Kalender</span>
+          </button>
+        </div>
       </nav>
 
       {/* ── Edit Expense Modal ── */}
