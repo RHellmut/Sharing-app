@@ -70,6 +70,7 @@ export interface StoreResult {
   addDocument:          (name: string, category: StoredDocument['category'], file: File) => Promise<void>;
   deleteDocument:       (id: string) => void;
   getDocumentUrl:       (storagePath: string) => Promise<string | null>;
+  getDocumentBlob:      (storagePath: string) => Promise<Blob | null>;
 }
 
 export function useStore(): StoreResult {
@@ -716,6 +717,23 @@ export function useStore(): StoreResult {
         .createSignedUrl(storagePath, 300);
       if (err || !data) return null;
       return data.signedUrl;
+    },
+
+    async getDocumentBlob(storagePath: string): Promise<Blob | null> {
+      try {
+        const { data, error: err } = await supabase.storage
+          .from('documents')
+          .download(storagePath);
+        if (err || !data) {
+          setOpError(`Datei konnte nicht geladen werden${err ? `: ${err.message}` : ''}`);
+          return null;
+        }
+        return data;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setOpError(`Netzwerkfehler beim Laden der Datei. (${msg})`);
+        return null;
+      }
     },
   };
 }

@@ -63,7 +63,7 @@ export default function App() {
     documents,
     addDocument,
     deleteDocument,
-    getDocumentUrl,
+    getDocumentBlob,
   } = useStore();
 
   const thisMonth = expensesThisMonth(activeExpenses);
@@ -403,7 +403,7 @@ export default function App() {
             documents={documents}
             onAdd={addDocument}
             onDelete={deleteDocument}
-            onGetUrl={getDocumentUrl}
+            onGetBlob={getDocumentBlob}
           />
         )}
       </main>
