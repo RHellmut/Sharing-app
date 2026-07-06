@@ -1,4 +1,4 @@
-const CACHE = 'catriver-cost-v2';
+const CACHE = 'catriver-cost-v3';
 
 // Cache the app shell on install
 self.addEventListener('install', event => {
