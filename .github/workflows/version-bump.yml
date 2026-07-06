@@ -29,13 +29,15 @@ jobs:
       # Commit through the GitHub API (createCommitOnBranch) instead of
       # `git push`. API commits are signed by GitHub's web-flow key, so
       # they appear as "Verified" — a plain git commit here would not.
+      # The base64 payloads are passed via files (-F name=@file); passing
+      # them inline hits the shell's ARG_MAX for large lockfiles.
       - name: Commit bumped version (signed)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           HEAD_OID=$(git rev-parse HEAD)
-          PKG_B64=$(base64 -w0 package.json)
-          LOCK_B64=$(base64 -w0 package-lock.json)
+          base64 -w0 package.json      | tr -d '\n' > pkg.b64
+          base64 -w0 package-lock.json | tr -d '\n' > lock.b64
           gh api graphql \
             -f query='mutation($repo:String!,$branch:String!,$oid:GitObjectID!,$pkg:Base64String!,$lock:Base64String!,$msg:String!) {
               createCommitOnBranch(input:{
@@ -51,6 +53,6 @@ jobs:
             -f repo="${{ github.repository }}" \
             -f branch="main" \
             -f oid="$HEAD_OID" \
-            -f pkg="$PKG_B64" \
-            -f lock="$LOCK_B64" \
+            -F pkg=@pkg.b64 \
+            -F lock=@lock.b64 \
             -f msg="chore: bump version to ${{ steps.ver.outputs.version }}"
