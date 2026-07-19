@@ -338,6 +338,44 @@ export default function App() {
 
             {showArchive ? (
               <div className="space-y-3">
+                {/* Gesamtübersicht über alle Kassenstürze */}
+                {(() => {
+                  const settled = archivedExpenses.filter(e => e.categoryId !== 'ausgleich');
+                  if (!settled.length) return null;
+                  const grandTotal = totalExpenses(settled);
+                  return (
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-600">Gesamtübersicht – alle Kassenstürze</h3>
+                      <p className="text-xl font-bold text-gray-800 mt-1">{formatCurrency(grandTotal)}</p>
+                      <p className="text-xs text-gray-400 mt-0.5 mb-3">{settled.length} abgerechnete Ausgaben</p>
+                      <div className="space-y-2.5">
+                        {CATEGORIES.filter(c => c.id !== 'ausgleich').map(cat => {
+                          const catExpenses = settled.filter(e => e.categoryId === cat.id);
+                          if (!catExpenses.length) return null;
+                          const total = totalExpenses(catExpenses);
+                          const pct = Math.round((total / grandTotal) * 100);
+                          return (
+                            <div key={cat.id} className="flex items-center gap-2">
+                              <span className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                                <CategoryIcon cat={cat} imgClassName="w-5 h-5" />
+                              </span>
+                              <div className="flex-1">
+                                <div className="flex justify-between text-xs mb-0.5">
+                                  <span className="text-gray-600">{cat.label}</span>
+                                  <span className="font-medium text-gray-800">{formatCurrency(total)}</span>
+                                </div>
+                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-slate-500 rounded-full" style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {kassensturzPeriods.map(period => (
                   <KassensturzPeriod
                     key={period.kassensturz.id}
