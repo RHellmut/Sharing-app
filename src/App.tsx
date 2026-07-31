@@ -538,7 +538,8 @@ export default function App() {
       {/* ── Edit Expense Modal ── */}
       {editingExpense && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0"
+               style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
             <h2 className="font-semibold text-gray-800">Ausgabe bearbeiten</h2>
             <button onClick={() => setEditingExpense(null)}
               className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
