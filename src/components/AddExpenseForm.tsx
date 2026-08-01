@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, X } from 'lucide-react';
+import { Camera, X, FileText } from 'lucide-react';
 import { Expense, PersonId, CategoryId, Settings } from '../types';
 import { USER_CATEGORIES } from '../constants';
 import { CategoryIcon } from './CategoryIcon';
@@ -61,10 +61,25 @@ export function AddExpenseForm({ settings, onAdd, onDone, initialExpense, onUpda
     const file = e.target.files?.[0];
     if (!file) return;
     setImgLoading(true);
-    try { setReceiptImage(await compressImage(file)); }
-    catch { alert('Bild konnte nicht geladen werden.'); }
+    try {
+      if (file.type === 'application/pdf') {
+        // PDFs werden nicht komprimiert, sondern direkt als Data-URL gespeichert
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload  = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        setReceiptImage(dataUrl);
+      } else {
+        setReceiptImage(await compressImage(file));
+      }
+    }
+    catch { alert('Beleg konnte nicht geladen werden.'); }
     finally { setImgLoading(false); }
   };
+
+  const receiptIsPdf = receiptImage?.startsWith('data:application/pdf');
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -257,10 +272,17 @@ export function AddExpenseForm({ settings, onAdd, onDone, initialExpense, onUpda
 
       {/* Receipt */}
       <div>
-        <label className="text-sm font-medium text-gray-600 block mb-1.5">Beleg-Foto (optional)</label>
+        <label className="text-sm font-medium text-gray-600 block mb-1.5">Beleg (optional)</label>
         {receiptImage ? (
           <div className="relative">
-            <img src={receiptImage} alt="Beleg" className="w-full max-h-52 object-cover rounded-xl" />
+            {receiptIsPdf ? (
+              <div className="w-full flex items-center gap-3 border border-gray-200 rounded-xl p-4">
+                <FileText size={28} className="text-red-500 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-700">PDF-Beleg angehängt</span>
+              </div>
+            ) : (
+              <img src={receiptImage} alt="Beleg" className="w-full max-h-52 object-cover rounded-xl" />
+            )}
             <button
               type="button"
               onClick={() => setReceiptImage(undefined)}
@@ -277,13 +299,13 @@ export function AddExpenseForm({ settings, onAdd, onDone, initialExpense, onUpda
             className="w-full border-2 border-dashed border-gray-200 rounded-xl py-7 flex flex-col items-center gap-2 text-gray-400 hover:border-slate-400 hover:text-slate-500 transition-colors"
           >
             <Camera size={24} />
-            <span className="text-sm">{imgLoading ? 'Wird geladen…' : 'Foto aufnehmen oder auswählen'}</span>
+            <span className="text-sm">{imgLoading ? 'Wird geladen…' : 'Foto oder PDF auswählen'}</span>
           </button>
         )}
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           onChange={handleImage}
           className="hidden"
         />

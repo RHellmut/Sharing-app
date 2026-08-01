@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Trash2, ImageIcon, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, ImageIcon, FileText, Pencil } from 'lucide-react';
 import { Expense, Settings } from '../types';
 import { CATEGORIES } from '../constants';
 import { formatCurrency } from '../calculations';
@@ -17,6 +17,7 @@ export function ExpenseItem({ expense, settings, onDelete, onEdit }: Props) {
   const [showReceipt, setShowReceipt] = useState(false);
 
   const cat = CATEGORIES.find(c => c.id === expense.categoryId)!;
+  const receiptIsPdf = expense.receiptImage?.startsWith('data:application/pdf');
   const paidByName = expense.paidBy === 'person1' ? settings.person1Name : settings.person2Name;
   const p1Share = expense.amount * expense.splitRatio;
   const p2Share = expense.amount * (1 - expense.splitRatio);
@@ -114,7 +115,7 @@ export function ExpenseItem({ expense, settings, onDelete, onEdit }: Props) {
                 onClick={() => setShowReceipt(true)}
                 className="flex items-center gap-1.5 text-slate-700 text-sm font-medium"
               >
-                <ImageIcon size={15} />
+                {receiptIsPdf ? <FileText size={15} /> : <ImageIcon size={15} />}
                 Beleg anzeigen
               </button>
             )}
@@ -127,11 +128,20 @@ export function ExpenseItem({ expense, settings, onDelete, onEdit }: Props) {
           className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
           onClick={() => setShowReceipt(false)}
         >
-          <img
-            src={expense.receiptImage}
-            alt="Beleg"
-            className="max-w-full max-h-full rounded-xl shadow-2xl"
-          />
+          {receiptIsPdf ? (
+            <iframe
+              src={expense.receiptImage}
+              title="Beleg"
+              className="w-full h-full bg-white rounded-xl shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={expense.receiptImage}
+              alt="Beleg"
+              className="max-w-full max-h-full rounded-xl shadow-2xl"
+            />
+          )}
         </div>
       )}
     </>
