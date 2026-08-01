@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Trash2, ImageIcon, FileText, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, ImageIcon, FileText, Pencil, X } from 'lucide-react';
 import { Expense, Settings } from '../types';
 import { CATEGORIES } from '../constants';
 import { formatCurrency } from '../calculations';
@@ -124,25 +124,52 @@ export function ExpenseItem({ expense, settings, onDelete, onEdit }: Props) {
       </div>
 
       {showReceipt && expense.receiptImage && (
-        <div
-          className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowReceipt(false)}
-        >
-          {receiptIsPdf ? (
+        receiptIsPdf ? (
+          <div
+            className="fixed inset-0 z-50 bg-black flex flex-col"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
+            <div
+              className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 flex-shrink-0"
+              style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
+            >
+              <span className="font-semibold text-gray-800">Beleg</span>
+              <button
+                type="button"
+                onClick={() => setShowReceipt(false)}
+                className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
+                aria-label="Schließen"
+              >
+                <X size={20} />
+              </button>
+            </div>
             <iframe
               src={expense.receiptImage}
               title="Beleg"
-              className="w-full h-full bg-white rounded-xl shadow-2xl"
-              onClick={e => e.stopPropagation()}
+              className="flex-1 w-full bg-white"
             />
-          ) : (
+          </div>
+        ) : (
+          <div
+            className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowReceipt(false)}
+          >
+            <button
+              type="button"
+              onClick={() => setShowReceipt(false)}
+              className="absolute right-4 z-10 bg-white/90 text-gray-700 rounded-full p-2 shadow"
+              style={{ top: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
+              aria-label="Schließen"
+            >
+              <X size={20} />
+            </button>
             <img
               src={expense.receiptImage}
               alt="Beleg"
               className="max-w-full max-h-full rounded-xl shadow-2xl"
             />
-          )}
-        </div>
+          </div>
+        )
       )}
     </>
   );
