@@ -25,10 +25,12 @@ function FileIcon({ mimeType, size = 20 }: { mimeType: string; size?: number }) 
   return <File size={size} className="text-gray-400" />;
 }
 
+// Reihenfolge bestimmt sowohl die Ordner-Reihenfolge als auch die Auswahl
+// im Upload- und Umbenennen-Dialog
 const DOC_CATEGORIES: { id: StoredDocument['category']; label: string }[] = [
   { id: 'vertraege', label: 'Verträge' },
-  { id: 'fatschenbrunn', label: 'Fatschenbrunn' },
   { id: 'sonstiges', label: 'Sonstige Dateien' },
+  { id: 'fatschenbrunn', label: 'Fatschenbrunn' },
 ];
 
 interface PreviewState {
