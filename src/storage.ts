@@ -3,6 +3,32 @@ import { Expense, Settings, Kassensturz, KassensturzPeriodData, ShoppingItem, Fi
 import { DEFAULT_SETTINGS } from './constants';
 import { supabase } from './supabaseClient';
 
+/**
+ * Supabase Storage lässt im Object-Key nur ASCII zu: Umlaute (etwa
+ * "Wasserzählerstand") oder ein Leerzeichen vor der Endung quittiert es mit
+ * "Invalid key". Der Anzeigename in der Tabelle bleibt davon unberührt — nur
+ * der Pfad im Bucket wird bereinigt.
+ */
+function toStorageKey(fileName: string): string {
+  const umlauts: Record<string, string> = {
+    'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue', 'ß': 'ss',
+  };
+  const ascii = fileName
+    .replace(/[äöüÄÖÜß]/g, c => umlauts[c])
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // é → e, å → a, …
+
+  const dot = ascii.lastIndexOf('.');
+  const hasExt = dot > 0 && dot < ascii.length - 1;
+  const clean = (part: string) => part
+    .replace(/[^A-Za-z0-9._-]+/g, '_')  // alles Übrige (inkl. Leerzeichen) ersetzen
+    .replace(/_+/g, '_')
+    .replace(/^[_.]+|[_.]+$/g, '');     // führende/abschließende _ und . entfernen
+
+  const base = clean(hasExt ? ascii.slice(0, dot) : ascii).slice(0, 100) || 'dokument';
+  const ext  = hasExt ? clean(ascii.slice(dot + 1)).slice(0, 10) : '';
+  return ext ? `${base}.${ext}` : base;
+}
+
 function dbToExpense(row: Record<string, unknown>): Expense {
   return {
     id:           row.id as string,
@@ -647,7 +673,7 @@ export function useStore(): StoreResult {
 
     async addDocument(name: string, category: StoredDocument['category'], file: File) {
       const id = crypto.randomUUID();
-      const storagePath = `${id}/${file.name}`;
+      const storagePath = `${id}/${toStorageKey(file.name)}`;
       try {
         const { error: uploadErr } = await supabase.storage
           .from('documents')
