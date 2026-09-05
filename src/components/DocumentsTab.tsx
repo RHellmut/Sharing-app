@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { FolderOpen, FilePlus, Download, Trash2, FileText, FileImage, File, X, Eye, Pencil } from 'lucide-react';
 import { StoredDocument } from '../types';
+
+// pdf.js ist groß — nur laden, wenn wirklich ein PDF geöffnet wird
+const PdfViewer = lazy(() => import('./PdfViewer').then(m => ({ default: m.PdfViewer })));
 
 interface Props {
   documents: StoredDocument[];
@@ -43,6 +46,7 @@ export function DocumentsTab({ documents, onAdd, onUpdate, onDelete, onGetBlob }
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [pdfFailed, setPdfFailed] = useState(false);
   const [editingDoc, setEditingDoc] = useState<StoredDocument | null>(null);
   const [editName, setEditName] = useState('');
   const [editCategory, setEditCategory] = useState<StoredDocument['category']>('vertraege');
@@ -78,6 +82,7 @@ export function DocumentsTab({ documents, onAdd, onUpdate, onDelete, onGetBlob }
       if (!blob) return;
       const typedBlob = doc.mimeType ? new Blob([blob], { type: doc.mimeType }) : blob;
       const url = URL.createObjectURL(typedBlob);
+      setPdfFailed(false);
       setPreview({ url, doc });
     } finally {
       setViewingId(null);
@@ -256,11 +261,20 @@ export function DocumentsTab({ documents, onAdd, onUpdate, onDelete, onGetBlob }
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-auto flex items-center justify-center p-2">
+          {/* Der PdfViewer scrollt selbst — sonst würden sich zwei Scroll-Container überlagern */}
+          <div className={
+            preview.doc.mimeType === 'application/pdf' && !pdfFailed
+              ? 'flex-1 min-h-0'
+              : 'flex-1 overflow-auto flex items-center justify-center p-2'
+          }>
             {preview.doc.mimeType.startsWith('image/') ? (
               <img src={preview.url} alt={preview.doc.name} className="max-w-full max-h-full object-contain" />
-            ) : preview.doc.mimeType === 'application/pdf' ? (
-              <iframe src={preview.url} title={preview.doc.name} className="w-full h-full bg-white rounded" />
+            ) : preview.doc.mimeType === 'application/pdf' && !pdfFailed ? (
+              <Suspense fallback={
+                <div className="w-8 h-8 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+              }>
+                <PdfViewer url={preview.url} onError={() => setPdfFailed(true)} />
+              </Suspense>
             ) : (
               <div className="text-center text-white/80 px-6">
                 <File size={52} className="mx-auto mb-4 opacity-60" />
