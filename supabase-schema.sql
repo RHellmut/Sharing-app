@@ -270,8 +270,28 @@ end $$;
 -- (für bereits bestehende Datenbanken einmalig ausführen)
 -- ============================================================
 
--- Neue Kategorie in der CHECK-Constraint erlauben
-alter table public.documents drop constraint if exists documents_category_check;
+-- Neue Kategorie in der CHECK-Constraint erlauben.
+-- Die alte Constraint wird dynamisch gesucht: bei inline deklarierten Checks
+-- vergibt Postgres zwar den Namen "documents_category_check", das ist aber
+-- nicht garantiert — ein übersehener Rest-Check würde 'fatschenbrunn' weiter
+-- blockieren.
+do $$
+declare c record;
+begin
+  for c in
+    select con.conname
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_namespace nsp on nsp.oid = rel.relnamespace
+    where nsp.nspname = 'public'
+      and rel.relname = 'documents'
+      and con.contype = 'c'
+      and pg_get_constraintdef(con.oid) like '%vertraege%'
+  loop
+    execute format('alter table public.documents drop constraint %I', c.conname);
+  end loop;
+end $$;
+
 alter table public.documents add constraint documents_category_check
   check (category in ('vertraege', 'fatschenbrunn', 'sonstiges'));
 
