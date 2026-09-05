@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { FolderOpen, FilePlus, Download, Trash2, FileText, FileImage, File, X, Eye } from 'lucide-react';
+import { FolderOpen, FilePlus, Download, Trash2, FileText, FileImage, File, X, Eye, Pencil } from 'lucide-react';
 import { StoredDocument } from '../types';
 
 interface Props {
   documents: StoredDocument[];
   onAdd: (name: string, category: StoredDocument['category'], file: File) => Promise<void>;
+  onUpdate: (id: string, name: string, category: StoredDocument['category']) => void;
   onDelete: (id: string) => void;
   onGetBlob: (storagePath: string) => Promise<Blob | null>;
 }
@@ -23,6 +24,7 @@ function FileIcon({ mimeType, size = 20 }: { mimeType: string; size?: number }) 
 
 const DOC_CATEGORIES: { id: StoredDocument['category']; label: string }[] = [
   { id: 'vertraege', label: 'Verträge' },
+  { id: 'fatschenbrunn', label: 'Fatschenbrunn' },
   { id: 'sonstiges', label: 'Sonstige Dateien' },
 ];
 
@@ -31,7 +33,7 @@ interface PreviewState {
   doc: StoredDocument;
 }
 
-export function DocumentsTab({ documents, onAdd, onDelete, onGetBlob }: Props) {
+export function DocumentsTab({ documents, onAdd, onUpdate, onDelete, onGetBlob }: Props) {
   const [showUpload, setShowUpload] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState('');
@@ -41,6 +43,9 @@ export function DocumentsTab({ documents, onAdd, onDelete, onGetBlob }: Props) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [editingDoc, setEditingDoc] = useState<StoredDocument | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState<StoredDocument['category']>('vertraege');
 
   // Object-URLs beim Schließen/Unmount freigeben, um Speicherlecks zu vermeiden
   useEffect(() => {
@@ -102,6 +107,23 @@ export function DocumentsTab({ documents, onAdd, onDelete, onGetBlob }: Props) {
 
   function closePreview() {
     setPreview(null); // useEffect-Cleanup gibt die URL frei
+  }
+
+  function openEdit(doc: StoredDocument) {
+    setEditingDoc(doc);
+    setEditName(doc.name);
+    setEditCategory(doc.category);
+  }
+
+  function closeEdit() {
+    setEditingDoc(null);
+    setEditName('');
+  }
+
+  function handleSaveEdit() {
+    if (!editingDoc || !editName.trim()) return;
+    onUpdate(editingDoc.id, editName, editCategory);
+    closeEdit();
   }
 
   function handleDelete(id: string) {
@@ -180,6 +202,13 @@ export function DocumentsTab({ documents, onAdd, onDelete, onGetBlob }: Props) {
                         }
                       </button>
                       <button
+                        onClick={() => openEdit(doc)}
+                        className="p-2 text-gray-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                        aria-label="Umbenennen"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
                         onClick={() => handleDelete(doc.id)}
                         disabled={deletingId === doc.id}
                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
@@ -249,6 +278,62 @@ export function DocumentsTab({ documents, onAdd, onDelete, onGetBlob }: Props) {
         </div>
       )}
 
+      {/* Umbenennen-Modal */}
+      {editingDoc && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center">
+          <div className="bg-white rounded-t-2xl w-full max-w-md p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800">Datei umbenennen</h3>
+              <button
+                onClick={closeEdit}
+                className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
+                aria-label="Schließen"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Name</label>
+              <input
+                type="text"
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(); }}
+                placeholder="Dateiname…"
+                autoFocus
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Kategorie</label>
+              <div className="grid grid-cols-3 gap-2">
+                {DOC_CATEGORIES.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setEditCategory(cat.id)}
+                    className={`py-2.5 px-1 rounded-xl text-xs font-medium leading-tight transition-all ${
+                      editCategory === cat.id ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveEdit}
+              disabled={!editName.trim()}
+              className="w-full bg-slate-700 text-white font-semibold py-3 rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50"
+            >
+              Speichern
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Upload Modal */}
       {showUpload && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center">
@@ -302,12 +387,12 @@ export function DocumentsTab({ documents, onAdd, onDelete, onGetBlob }: Props) {
             {/* Category */}
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1.5">Kategorie</label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {DOC_CATEGORIES.map(cat => (
                   <button
                     key={cat.id}
                     onClick={() => setCategory(cat.id)}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    className={`py-2.5 px-1 rounded-xl text-xs font-medium leading-tight transition-all ${
                       category === cat.id ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-600'
                     }`}
                   >

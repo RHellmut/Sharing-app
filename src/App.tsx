@@ -62,6 +62,7 @@ export default function App() {
     updateCalendarEvent,
     documents,
     addDocument,
+    updateDocument,
     deleteDocument,
     getDocumentBlob,
   } = useStore();
@@ -440,6 +441,7 @@ export default function App() {
           <DocumentsTab
             documents={documents}
             onAdd={addDocument}
+            onUpdate={updateDocument}
             onDelete={deleteDocument}
             onGetBlob={getDocumentBlob}
           />

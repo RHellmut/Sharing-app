@@ -180,7 +180,7 @@ create policy "anon_delete_calendar" on public.calendar_events for delete to ano
 create table if not exists public.documents (
   id           uuid        primary key default gen_random_uuid(),
   name         text        not null,
-  category     text        not null check (category in ('vertraege', 'sonstiges')),
+  category     text        not null check (category in ('vertraege', 'fatschenbrunn', 'sonstiges')),
   mime_type    text        not null default '',
   size_bytes   integer     not null default 0,
   storage_path text        not null,
@@ -190,6 +190,7 @@ create table if not exists public.documents (
 alter table public.documents enable row level security;
 create policy "anon_select_documents" on public.documents for select to anon using (true);
 create policy "anon_insert_documents" on public.documents for insert to anon with check (true);
+create policy "anon_update_documents" on public.documents for update to anon using (true) with check (true);
 create policy "anon_delete_documents" on public.documents for delete to anon using (true);
 
 -- Storage-Bucket für Dokumente
@@ -261,5 +262,26 @@ do $$ begin
     alter table public.sent_push_notifications enable row level security;
     create policy "anon_all_sent_push" on public.sent_push_notifications
       for all to anon using (true) with check (true);
+  end if;
+end $$;
+
+-- ============================================================
+-- Migration: Dokumenten-Kategorie "fatschenbrunn" + Umbenennen
+-- (für bereits bestehende Datenbanken einmalig ausführen)
+-- ============================================================
+
+-- Neue Kategorie in der CHECK-Constraint erlauben
+alter table public.documents drop constraint if exists documents_category_check;
+alter table public.documents add constraint documents_category_check
+  check (category in ('vertraege', 'fatschenbrunn', 'sonstiges'));
+
+-- UPDATE-Policy, damit Dokumente nachträglich umbenannt werden können
+do $$ begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='documents' and policyname='anon_update_documents'
+  ) then
+    create policy "anon_update_documents" on public.documents
+      for update to anon using (true) with check (true);
   end if;
 end $$;

@@ -68,6 +68,7 @@ export interface StoreResult {
   deleteCalendarEvent:  (id: string) => void;
   updateCalendarEvent:  (event: CalendarEvent) => void;
   addDocument:          (name: string, category: StoredDocument['category'], file: File) => Promise<void>;
+  updateDocument:       (id: string, name: string, category: StoredDocument['category']) => void;
   deleteDocument:       (id: string) => void;
   getDocumentUrl:       (storagePath: string) => Promise<string | null>;
   getDocumentBlob:      (storagePath: string) => Promise<Blob | null>;
@@ -682,6 +683,42 @@ export function useStore(): StoreResult {
         setOpError(`Dokument konnte nicht hochgeladen werden: ${msg}`);
         throw err;
       }
+    },
+
+    updateDocument(id: string, name: string, category: StoredDocument['category']) {
+      const doc = documents.find(d => d.id === id);
+      if (!doc) return;
+      const trimmed = name.trim();
+      if (!trimmed) {
+        setOpError('Der Dateiname darf nicht leer sein.');
+        return;
+      }
+      if (trimmed === doc.name && category === doc.category) return;
+      const snapshot = documents;
+      setDocuments(prev => prev.map(d => d.id === id ? { ...d, name: trimmed, category } : d));
+      void (async () => {
+        try {
+          // .select() zurücklesen: ohne UPDATE-RLS-Policy liefert Supabase keinen
+          // Fehler, sondern 0 geänderte Zeilen — das wäre ein Silent Failure.
+          const { data, error: err } = await supabase.from('documents')
+            .update({ name: trimmed, category })
+            .eq('id', id)
+            .select('id');
+          if (err) {
+            setDocuments(snapshot);
+            setOpError(`Dokument konnte nicht umbenannt werden: ${err.message}`);
+            return;
+          }
+          if (!data || data.length === 0) {
+            setDocuments(snapshot);
+            setOpError('Dokument konnte nicht umbenannt werden (keine Schreibrechte). Bitte die Migration aus supabase-schema.sql ausführen.');
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setDocuments(snapshot);
+          setOpError(`Netzwerkfehler beim Umbenennen des Dokuments. (${msg})`);
+        }
+      })();
     },
 
     deleteDocument(id: string) {

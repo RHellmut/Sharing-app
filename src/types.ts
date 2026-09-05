@@ -85,7 +85,7 @@ export interface CalendarEvent {
 export interface StoredDocument {
   id: string;
   name: string;
-  category: 'vertraege' | 'sonstiges';
+  category: 'vertraege' | 'fatschenbrunn' | 'sonstiges';
   mimeType: string;
   sizeBytes: number;
   storagePath: string;
