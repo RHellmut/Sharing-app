@@ -11,7 +11,21 @@ const MAX_ZOOM = 4;
 /** Obergrenze für die Canvas-Breite — schützt iOS vor Out-of-Memory bei vielen Seiten */
 const MAX_CANVAS_WIDTH = 2400;
 
+/**
+ * Belege liegen als base64-Data-URL vor, Dokumente als Blob-URL. pdf.js kommt
+ * mit Data-URLs nicht zuverlässig zurecht, deshalb hier in Bytes wandeln.
+ */
+function toDocumentSource(url: string): { url: string } | { data: Uint8Array } {
+  if (!url.startsWith('data:')) return { url };
+  const base64 = url.slice(url.indexOf(',') + 1);
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return { data: bytes };
+}
+
 interface Props {
+  /** Blob-URL, normale URL oder base64-Data-URL */
   url: string;
   /** Wird gemeldet, wenn das PDF gar nicht gelesen werden kann (Fallback anzeigen) */
   onError?: () => void;
@@ -71,7 +85,7 @@ export function PdfViewer({ url, onError }: Props) {
     setFailed(false);
     setZoom(1);
 
-    const task = pdfjsLib.getDocument({ url });
+    const task = pdfjsLib.getDocument(toDocumentSource(url));
     task.promise
       .then(async pdf => {
         if (cancelled) return;

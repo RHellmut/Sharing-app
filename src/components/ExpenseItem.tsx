@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { ChevronDown, ChevronUp, Trash2, ImageIcon, FileText, Pencil, X } from 'lucide-react';
 import { Expense, Settings } from '../types';
 import { CATEGORIES } from '../constants';
 import { formatCurrency } from '../calculations';
 import { CategoryIcon } from './CategoryIcon';
+
+// pdf.js ist groß — nur laden, wenn wirklich ein PDF-Beleg geöffnet wird
+const PdfViewer = lazy(() => import('./PdfViewer').then(m => ({ default: m.PdfViewer })));
 
 interface Props {
   expense:  Expense;
@@ -143,11 +146,15 @@ export function ExpenseItem({ expense, settings, onDelete, onEdit }: Props) {
                 <X size={20} />
               </button>
             </div>
-            <iframe
-              src={expense.receiptImage}
-              title="Beleg"
-              className="flex-1 w-full bg-white"
-            />
+            <div className="flex-1 min-h-0 w-full bg-black">
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-full">
+                  <div className="w-8 h-8 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                </div>
+              }>
+                <PdfViewer url={expense.receiptImage} />
+              </Suspense>
+            </div>
           </div>
         ) : (
           <div
